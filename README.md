@@ -1,6 +1,8 @@
 <i src="myzone.png"/>
 
-*This convention is currently a Version 1 pre-release. It is based on a working proof of concept that was built with an earlier version of this convention. This is not considered production ready until the official V1 release.*
+**Status:**
+
+*This convention is currently v0. It is based on a working proof of concept that was built with an earlier version of this convention. This is not considered final until the official v1 release.*
 
 *The working reference implementation that is based on an earlier version of this convention is currently (Jan 2020) being updated. As publishers are converted they will be added to the reference implemention for this version. This includes publishers for openzwave, onewire, isy99, ipnetwork, webcam, wallpaper and a dashboard*. 
 
@@ -54,10 +56,10 @@ Shoot me a message if you are interested.
 
 ## Credits
 
-* This project was inspired by the 'homie convention', a convention for home automation that is based on the MQTT bus. 
+* This project was inspired by the [homie convention](https://github.com/homieiot/convention), a convention for home automation that is based on the MQTT bus. 
 * The openzwave publisher would not have been possible without the work of the 'go-openzwave' library.
 
 ## License
 
-This project is licensed under GPL-3. Anyone can copy and use this project. Any modifications and derivatives of the source must be made public as well for the benefit of the community.
+This project is licensed under GPL-3. Anyone can copy and use this project. Any modifications and derivatives of the source must be made public for the benefit of the community.
 

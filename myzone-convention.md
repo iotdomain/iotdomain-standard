@@ -1,6 +1,6 @@
 # MyZone Introduction
 
-Myzone is an information exchange convention for IoT devices, services and other information producers and consumers
+Myzone is an information exchange convention for IoT devices, services and other information producers and consumers.
 
 
 ## Mission statement
@@ -10,23 +10,23 @@ zones. Information is presented through desktop and mobile and wearable devices 
 
 ## Information and Control
 
-Information can come from many sources like sensors as well as services that derive new information from existing information. This includes any data captured by IoT devices, camera images, data from the internet,
-user input, as well as services that generate new information like analytics and machine learning.
+Information can come from many sources like sensors as well as services that derive new information from existing information. This includes any data captured by IoT devices, camera images, data from the internet, user input, as well as services that generate new information like analytics and machine learning.
 
-Control of devices or services is a form of information, one that is provided by users and feeds back into the devices. If control is shared with other zones, then inhabitants and services in that zone can also provide control.
+Control of devices or services is a form of information, one that is provided by users and feeds back into the nodes. 
 
-## Addressing & Zoning
+## Addressing of Information
 
-Anything that produces information is called a 'node', including people. Nodes reside in a zone and each node has a unique address consisting of the zone, publisher and nodeId.
+Anything that produces information is called a 'node', including people. Nodes are published by a publisher and reside in a zone. Combined these form the address of the node: the zone ID / the publisher ID / the node ID. Nodes have inputs and outputs that have their own address and whose type and instance are appended to the node address. The separation of the address segments depends on the publication medium. On MQTT this is a '/'.
 
-A zone is a physical or virtual area where information resides and can be presented. A zone can be a home, a street, a city, or an area in a virtual game world. All consumers within a zone have access to information published in that zone. Each zone has a unique identifier. A zone ID does not have to be globally unique but must be unqiue between zones it shares information with. It is valid to use a domain name as a zoneId where the dots are replaced with dashes.
+## Zones
+A zone is a physical or virtual area where information resides and can be presented. A zone can be a home, a street, a city, or a virtual area like a sensor network or a game world. All consumers in a zone have access to information published in that zone. Each zone has a unique identifier. A zone ID does not have to be globally unique but must be unqiue between zones it shares information with.
 
 Information that is collected within a zone can be shared with other zones of choice. External zones can subscribe to information that is made available to them. Sharing takes place through a secure connection
 between zones.
 
 For example, a water level sensor provides water levels to a city monitoring zone. A service within the monitoring zone interprets the water levels from multiple sensors and determines the risk level for flooding. This risk level information is shared with the city's community zone and available to residents and visitors of the city website.
 
-A virtual game uses zones for its street map that are bridged to street zones in the real world. The number of people in the real world is reflected in the zone of the game world; An alarm triggered in the real world shows up in the game world; A message sent in the game world shows up in the real world. Once support for zones is available in the game the limitation is the imagination.
+A virtual game uses zones for its street map that are bridged to street zones in the real world. The number of people in the real world is reflected in the zone of the game world; An alarm triggered in the real world shows up in the game world; A message sent in the game world shows up in the real world. Once support for zones is available in the game the possibilities are endless.
 
 More examples are presented in the MyZone use-cases document.
 
@@ -54,8 +54,7 @@ Inhabitants of a zone can be notified of updates to information based on the inf
 Situational awareness can come from location, time of day, activity and other information. It can be used to filter collected information before it is presented, or delay its presentation until the situation has
 changed. The location and activity of an inhabitant can be determined via a portable or wearable device linked to that inhabitant, or derived from cameras or other sensors.
 
-Once information updates are accepted it is presented to the zone inhabitant through the available presentation device. This can simply be shown on all devices associated with the inhabitant, or the device
-currently in use.
+Once information updates are accepted it is presented to the zone inhabitant through the available presentation device. This can simply be shown on all devices associated with the inhabitant, or the device currently in use.
 
 Presented information has a life span. Stale information that has expired should be removed from presentation, depending on the type of information. This can be a personal preference.
 
@@ -63,30 +62,31 @@ Notification and presentation of notifications are provided by services that com
 
 ## Discovery and Configuration
 
-Publishers of information also provide discovery and configuration metadata of the information.The discovery metadata describes the type of information, its publisher, and its configuration. Standardization of discovery and configuration allows data and information to be managed from a single user interface regardless of the various technologies involved.
+Publishers of information also provide discovery and configuration metadata of the information. The discovery metadata describes the type of information, its publisher, and its configuration. Standardization of discovery and configuration allows data and information to be managed from a single user interface regardless of the various technologies involved.
 
 Changing configuration and controlling inputs can be limited to specific users as identified by the signature contained in the configuration and control messages.
 
 ## Technology
 
-MyZone is technology agnostic. It is a convention that describes the information format and exchange, discovery, configuration and zoning, irrespective of the technology used to implement it. Use of different
-technologies will serve to improve further integration and makes it easier to expand the information network.
+MyZone is technology agnostic. It is a convention that describes the information format and exchange, discovery, configuration and zoning, irrespective of the technology used to implement it. Use of different technologies will serve to improve further integration and makes it easier to expand the information network.
 
 A reference implementation is provided, written in the golang and typescript languages, using the MQTT service bus for publishing information, discovery and configuration in the JSON format.
 
 ## Data Format
 
-The information exchange rules must be followed by all implementations of the convention. A JSON based encoding of the data is recommended. Other encodings such as XML or whatever becomes popular tomorrow can
-also be used.
+The information exchange rules must be followed by all implementations of the convention. A JSON based encoding of the data is recommended. Other encodings such as XML or whatever becomes popular tomorrow can also be used.
 
 The primary requirement is that the information fields described are preserved and all information publishers within a zone use the same format. A zone speaks only one data format language.
 
-Future proofing can be achieved by using different zones for different data formats and using a bridge service to share between zones. The bridge maps between old and new data format. This allows for incremental
-improvements while maintaining interoperability.
+Future proofing can be achieved by using different zones for different data formats and using a bridge service to share between zones. The bridge maps between old and new data format. This allows for incremental improvements while maintaining interoperability.
 
 ## Versioning
 
-Future versions of this convention must remain backwards compatible. New fields can be added as long as they remain optional. Implementations must accept and ignore unknown fields.
+The convention is version using semantic versioning in the form v1.2 where 1 is the major version, 2 is the minor backwards compatible version. 
+
+Future minor version upgrades of this convention must remain backwards compatible. New fields can be added as long as they remain optional. Implementations must accept and ignore unknown fields.
+
+A major version upgrade of this convention is not required to be backwards compatible but **must** be able to co-exists on the same bus.
 
 Publishers include the version of the MyZone convention when publishing their node. See 'discovery' for more information.
 
@@ -94,45 +94,36 @@ Publishers include the version of the MyZone convention when publishing their no
 
 | Terminology | Description |
 | ----------- |:------------|
-| Account | The account used to connect a publisher to an information bus |
-| Authentication | Method used to identify the publisher and subscriber with the information bus |
+| Account     | The account used to connect a publisher to an message bus |
+| Authentication| Method used to identify the publisher and subscriber with the message bus |
 | Configuration | Configuration of the node configuration
-| Discovery | Description of nodes, their inputs and outputs
+| Discovery   | Description of nodes, their inputs and outputs
 | Information | Anything that can be published by a producer. This can be sensor data, images, 
-| Information Bus | A transport for publication of information and control. Information is published by a node onto a message bus. Consumers subscribe to information they are interested in.
-| Node | A node is a device or service that provides information and accepts control input. Information from this node can be published by the node itself or published by a (publisher) service that knows how to access the node. 
-| Node Input | Input to control the node, for example a switch.
-| Node Output| Node Information is provided through outputs. For example, the current temperature.
-| Publisher| A service that is responsible for publishing node information and handle configuration updates and control inputs. Publishers are nodes. Publishers can sign their publications to provide source verification.
-| Subscriber| Consumer of data or information
-| Zone| An area in which information is shared between inhabitants
+| message bus | A transport for publication of information and control. Information is published by a node onto a message bus. Consumers subscribe to information they are interested in.
+| Node        | A node is a device or service that provides information and accepts control input. Information from this node can be published by the node itself or published by a (publisher) service that knows how to access the node. 
+| Node Input  | Input to control the node, for example a switch.
+| Node Output | Node Information is provided through outputs. For example, the current temperature.
+| Publisher   | A service that is responsible for publishing node information and handle configuration updates and control inputs. Publishers are nodes. Publishers can sign their publications to provide source verification.
+| Subscriber  | Consumer of data or information
+| Zone        | An area in which information is shared between inhabitants
 
 
 
 ## Zone Overview
 
-A Zone combines the information from its publishers into an information
-bus. Consumers of this information can subscribe to the information and
-get notified of updates. Various bus implementations are available. The
-reference implementation uses MQTT.
+A Zone combines the information from its publishers into an message bus. Consumers of this information can subscribe to the information and get notified of updates. Various bus implementations are available. The reference implementation uses MQTT.
 
-The Zone Bridge is a service that exchanges shared information with
-other zones.
+The Zone Bridge is a service that exchanges shared information with other zones.
 
 \<image\>
 
-A publisher consists of four parts, discovery, configuration, inputs and
-outputs.cab
+A publisher consists of four parts, discovery, configuration, inputs and outputs.
 
 \<image\>
 
-The MyZone convention describes the data exchange format between zone
-publishers and consumers of information.
+The MyZone convention describes the data exchange format between zone publishers and consumers of information.
 
-Publishers make information available on addresses, while consumers
-subscribe to these addresses to receive the information. The addressing,
-structure and security of this information is defined as part of this
-convention.
+Publishers make information available on addresses, while consumers subscribe to these addresses to receive the information. The addressing, structure and security of this information is defined as part of this convention.
 
 Publishers are responsible for:
 1.  Publishing output information 
@@ -151,32 +142,24 @@ Publishers are responsible for:
 
     This is optional and intended for environments where the computing power is available. Publishers can implement constraints that only trusted users can update the inputs.
 
-All publishers in a zone must use the same data interchange format of
-the published records. The recommended format is JSON. Other formats
-like BSON or XML can be used as long as all publishers of the zone use
-the same format. Zone Bridges exchange information in JSON.
+All publishers in a zone must use the same data interchange format of the published records. The recommended format is JSON. Other formats such as BSON or XML can be used as long as all publishers of the zone use the same format. Zone Bridges always exchange information in JSON.
 
 # Inputs and Outputs
 
-Information flows between nodes to consumers via publishers. Node
-information is published as outputs and control is handled via publisher
-inputs.
+Information flows between nodes to consumers via publishers. Node output information is published as and control is handled via publisher inputs.
 
 ## In/Output Addresses
 
-The addresses used to publish outputs and control inputs consist of
-segments. The address segments include the zone, the publisher of the
-information, the node whose information is published or controlled, the
-type of information, and the instance of the in- or output.
+The addresses used to publish outputs and control inputs consist of segments. The address segments include the zone, the publisher of the information, the node whose information is published or controlled, the type of information, and the instance of the in- or output.
 
-Segment names consist of alphanumeric, hyphen (-), and underscore (\_)
-characters. Reserved keywords start with a dollar ($) character.
-Other characters are not recommended to allow for various
+Segment names consist of alphanumeric, hyphen (-), and underscore (\_) characters. Reserved keywords start with a dollar ($) character. Other characters are not recommended to allow for various
 publish/subscribe technologies like MQTT, REST or other.
 
-MQTT/REST format example. Depending on the implementation environment,
-other methods of separating address segments can be used, as long as
-they are consistent within a zone:
+Segment names are separated with a separator token. The token used depends on the communication bus used. By default this is the forward slash (/). Other tokens or methods of separating address segments can be used, but they must be consistent within a zone. 
+
+If the message payload contain a reference to a node, input or output then only the segments must be used, not the separator tokens: 
+
+Address Example for MQTT/REST:
 
 * **{zoneId} / {publisherId} / {nodeId} / {type} / {instance} / $value**
 * **{zoneId} / {publisherId} / {nodeId} / {type} / {instance} / $latest**
@@ -230,29 +213,26 @@ computing power.
 
 The payload structure is as follows:
 
-| Field |      | Data Type   | Required | Description
-|-------|------|-------------|----------|------------
-| address     || Address  |  optional | Record with the node address
-|| zoneId      | string   | required | zone address segment
-|| publisherId | string   | required | publisher address segment
-|| nodeId      | string   | required | node address segment
-| type        || string   | required | The output type of this node
-| instance    || string   | required | The input instance of this node. Use 0 if only a single instance exists
-| signature   || string   | optional | Signature of this record, signed by the publisher
-| timeStamp   || string   | required | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ"
-| unit        || string   | optional | unit of value type
-| value       || string   | required | value in string format
+| Field        | Data Type | Required     | Description
+|--------------|-----------|------------- |------------
+| zoneId       | string    | **required** | The zone in which the node lives.
+| publisherId  | string    | **required** | The service that is publishing the information. 
+| nodeId       | string    | **required** | The node whose in/output is discovered. 
+| type         | string    | **required** | The output type of this node
+| instance     | string    | **required** | The input instance of this node
+| signature    | string    | optional     | Signature of this record, signed by the publisher
+| timeStamp    | string    | **required** | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ"
+| unit         | string    | optional     | unit of value type
+| value        | string    | **required** | value in string format
 
 
 JSON example of a '$latest' publication:
 ```
 zone-1/openzwave/6/temperature/0/$latest:
 {
-  "address":{
-    "zoneId" : "zone-1",
-    "publisherId": "openzwave",
-    "nodeId": "5",
-  },
+  "zoneId": "zone-1",
+  "publisherId": "openzwave",
+  "nodeId": "5",
   "type": "temperature",
   "instance": "0",
   "signature": "..."
@@ -273,27 +253,27 @@ temperature rising or falling, or presenting a graph of the last 24 hours.
 
 The payload structure is as follows:
 
-| Field      |     | Data Type   | Required | Description |
-| ---------- | --- | ----------- | -------- | ------------ |
-| address         || Address     | optional | Record with the node address |
-| type         | | string      | required | The output type of this node |
-| instance     | | string      | required | The input instance of this node |
-| history      | | list        | required | eg: [{"timeStamp": "YYYY-MM-DDTHH:MM:SS.sssTZ","value": string}, ...] |
-|| timeStamp     | string      | required | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
-|| value         | string      | required | Value in string format |
-| signature    | | string      | optional | Signature of this record, signed by the producer |
-| unit         | | string      | optional | unit of value type |
+| Field        | Data Type | Required     | Description |
+| ----------   | --------  | -----------  | ------------ |
+| zoneId       | string    | **required** | The zone in which the node lives.
+| publisherId  | string    | **required** | The service that is publishing the information. 
+| nodeId       | string    | **required** | The node whose in/output is discovered. 
+| type         | string    | **required** | The output type of this node
+| instance     | string    | **required** | The input instance of this node
+| history      | list      | **required** | eg: [{"timeStamp": "YYYY-MM-DDTHH:MM:SS.sssTZ","value": string}, ...] |
+|| timeStamp   | string    | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" 
+|| value       | string    | Value in string format using the node's unit
+| signature    | string    | optional     | Signature of this record, signed by the producer |
+| timeStamp    | string    | **required** | timestamp this message was created
 
 
 A JSON example:
 ```
 zone-1/openzwave/6/temperature/0/$24hours:
 {
-  "address":{
-    "zoneId" : "zone-1",
-    "publisherId": "openzwave",
-    "nodeId": "5",
-  },
+  "zoneId" : "zone-1",
+  "publisherId": "openzwave",
+  "nodeId": "5",
   "type": "temperature",
   "instance": "0",
   "history": [
@@ -314,26 +294,26 @@ Subscribing to the set address is only for nodes that have inputs.
 
 The payload structure is as follows:
 
-| Field      | | Data Type   | Required | Description
-|------------|----|-------------|----------|------|
-| address     || Address  |  optional | Record with the node address
-| type || string   | required  | The input type to set
-| instance    || string   | required  | The input instance to set 
-| timeStamp   || string   | required  | Time this request was created, in ISO8601 format, eg YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored.
-| sender      || Address  | required | Address of the node representing the sender requesting to update the input
-| signature   || string   | optional | Signature of this record, signed by the sender that wants to set the input.
-| value       || string   | required | The input value
+| Field        | Data Type | Required      | Description
+|------------- |-----------|----------     |------ 
+| zoneId       | string    | **required**  | The zone in which the node lives.
+| publisherId  | string    | **required**  | The publisher
+| nodeId       | string    | **required**  | The node 
+| type         | string    | **required**  | The input type to set
+| instance     | string    | **required**  | The input instance to set 
+| timeStamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored.
+| sender       | Address   | **required** | Address of the node representing the sender requesting to update the input
+| signature    | string    | optional     | Signature of this record, signed by the sender that wants to set the input
+| value        | string    | **required** | The input value to set
 
 
 A JSON example:
 ```
 zone-1/openzwave/6/switch/0/$set:
 {
-  "address":{
-    "zoneId" : "zone-1",
-    "publisherId": "openzwave",
-    "nodeId": "6",
-  },
+  "zoneId" : "zone-1",
+  "publisherId": "openzwave",
+  "nodeId": "6",
   "type": "switch",
   "instance": "0",
   "sender": {
@@ -354,141 +334,67 @@ facilitate interoperability between publishers and consumers the
 input and output types are defined as part of this convention in Appendix A:
 
 
-# Node Discovery 
+# Discovery 
 
-Node discovery describes the node, its attributes, configuration, inputs
-and outputs. It is usually published by the same publisher that is
-responsible for publishing the output values and subscribing to input
-control values. Discovery messages can be signed by its publisher to
-verify its authenticity.
+Discovery describes the node, inputs and outputs. These are usually published by the same publisher that is responsible for publishing the output values and subscribing to input control values. Discovery messages can be signed by its publisher to verify its authenticity.
 
-Publishers that publish discovery must also publish a node that
-represents themselves. The publisher's node id must be **\$publisher**.
-Publishers that have their own sensors can choose to publish the inputs
-and outputs under the **\$publisher** node ID, or publish two records, one
-for the **\$publisher** and one for the node with the inputs and outputs.
+Publishing of node, input and output discovery is optional but highly recommended. It enables auto discovery,configuration management and information verification. For very resource restricted devices it can be omitted however.
 
-Publishing of node discovery is optional but highly recommended. It
-enables auto discovery, configuration management and information
-verification. For very resource restricted devices it can be omitted
-however.
+Publishers that publish node discovery must also publish a node that represents themselves. The publisher's node id must be **\$publisher**. Publishers that have their own sensors can choose to publish the inputs
+and outputs under the **\$publisher** node ID, or publish two records, one for the **\$publisher** and one for the node with the inputs and outputs.
 
-## Discovery Address
+## Node Discovery
+Node discovery publishes the devices and services that are producers of information. The discovery shares the attributes of the device such as its name, make and model, and its configuration. Node discovery is intended for presenting a list of available devices and services and manage their configuration. It does not have to be shared with other zones in order to use their outputs.
 
-The addresses used to publish node discovery consists of segments that
-describe the zone, publisher of the information, and the node being
-discovered.
+The addresses used to publish node discovery consists of segments that describe the zone, publisher of the information, and the node being discovered. 
 
-Each segment consists of alphanumeric, hyphen (-), underscore (_), or dollar ($)
-characters. Other characters are not recommended to allow for various
-publish/subscribe mediums (like MQTT, REST). The $prefix is for reserved words.
+Each segment consists of alphanumeric, hyphen (-), underscore (_), or dollar (\$) characters. Other characters are not recommended to allow for various publish/subscribe mediums (like MQTT, REST). The '$' prefix is for reserved words.
 
-MQTT/REST address format:
+MQTT/REST node discovery address:
+  > **{zoneId} / {publisherId} / {nodeId} / $discover**
 
-> **{zoneId} / {publisherId} / {nodeId} / $discover**
+### Node discovery address structure
 
-| Address segment  | Description |
-| :--------------- | ----------- |
-| {zoneId} | The zone in which discovery takes place.
-| {publisherId} | The service that is publishing the information. A publisher provides its identity when publishing a node discovery. The publisher Id is unique within its zone. The node can its own publisher. In case of incompatible devices the publisher can be an adapter service that publishes the nodes.
-| {nodeId} | The node that is discovered. This is a device identifier or a service identifier and unique within a publisher. Two special nodes are defined: “$publisher” is the service that publishes on behalf of the node. “$gateway” represents the device that acts as a gateway to one or more nodes. For example a zwave controller.
-| $discover | Keyword for node discovery. 
+|Address segment| Description |
+| ------------- | ----------- |
+| {zoneId}      | The zone in which the node lives
+| {publisherId} | The service that is publishing the information. A publisher provides its identity when publishing a node discovery. The publisher Id is unique within its zone. 
+| {nodeId}      | The node that is discovered. This is a device or a service identifier and unique within a publisher. Two special nodes are defined: “$publisher” is a service node that publishes. “$gateway” represents the device that acts as a gateway to one or more nodes. For example a zwave controller.
+| $discover     | Keyword for node discovery. 
 
 
-MQTT example:
+### Node Discovery Payload
 
-The discovery of a node '5' with a temperature sensor, published by a service named 'openzwave' is published on an MQTT bus on topic:
-  > **myzone/openzwave/5/$discover**
+The discovery payload describes in detail the node and its configuration. The objective is for the node to be
+sufficiently described so consumers can identify and configure it without further information.
 
-The payload describes node 5 with its inputs and outputs.
+| Field         | Data Type  | Required     | Description
+| -----------   |----------- |----------    |------------
+| zoneId        | string     | **required** | The zone in which the node lives.
+| publisherId   | string     | **required** | The service that is publishing the information. 
+| nodeId        | string     | **required** | The node that is discovered. 
+| attr          | dictionary | **required** | Attributes describing the node. Collection of key-value string pairs that describe the node. The list of predefined attribute keys are part of the convention. See appendix.
+| config        | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the configuration options. These can be modified with a ‘$configure’ message.
+| signature     | string | optional | Signature of this record signed by the publisher
+| timeStamp     | string | optional | Time the record is created
 
-## Discovery Payload
+### Configuration Record
 
-The discovery payload describes in detail the node, its configuration,
-and its inputs and outputs. The objective is for the node to be
-sufficiently described so consumers can use it without further
-information.
+The configuration record is used in both node configuration and input/output configuration. Each configuration attribute is described in a record as follows:
 
-**Discovery Record:**
-
-| Field  | Data Type | Required | Description
-| -------- |----------|----------|------------
-| address  | Address record |  optional | Record with the node address
-| attr     | Dictionary |required |Node attributes provided by the node. Collection of key-value string pairs that describe the node. For interoperability, attribute keys that are part of the convention are described below.
-| config   | List of **Configuration records** | optional | Node configuration. Set of configuration objects that describe the configuration options. These can be modified with a ‘configure’ message.
-|inputs    | List of Input Records | optional|List of records describing each available input. See input/output definition below.
-|outputs   | List of Output Records | optional|List of records describing each available output. See input/output definition below.
-|timeStamp | string | optional | Time the reocrd is created
-|signature | string | optional | Signature of this record signed by the publisher
-
-**Configuration Record:**
-
-| Field  | Data Type| Required | Description
-|--------|----------|----------|------------
-| name | string| required | Unique name of the configuration.
-| value| string| required| The current configuration value in string format.
-|
-| datatype | enum| optional| Type of value. Used to determine the editor to use for the value. One of: bool, enum, float, int, string. Default is ‘string’
-| default  | string| optional| Default value for this configuration in string format
+| Field    | Data Type| Required | Description
+|--------  |----------|----------|------------
+| name     | string   | **required** | Name of the configuration. This has to be unique within the list of configuration records.
+| datatype | enum     | optional| Type of value. Used to determine the editor to use for the value. One of: bool, enum, float, int, string. Default is ‘string’
+| default  | string   | optional| Default value for this configuration in string format
 | description| string | optional | Description of the configuration for human use
-| enum | List of strings | optional* | Required when datatype is enum. List of valid enum values as strings
-| max | number | optional | Optional maximum value for numeric data
-| min | number | optional | Optional minimum value for numeric data
-| secret| bool| optional| Optional flag that the value is secret and will not be published. When a secret configuration is set, the value is encrypted with the node public key. 
-| 
+| enum     | \[strings] | optional* | List of valid enum values as strings. Required when datatype is enum
+| max      | float    | optional | Optional maximum value for numeric data
+| min      | float    | optional | Optional minimum value for numeric data
+| secret   | bool     | optional | Optional flag that the configuration value is secret and will be left empty. When a secret configuration is set in $configure, the value is encrypted with the publisher node public key. 
+| value    | string   | **required**| The current configuration value in string format. If empty, the default value is used.
 
-**Input/Output Discovery Record:**
-
-| Field  | Data Type| Required | Description
-|--------|----------|----------|------------
-| type | string | required | Type of input/output. See list below
-| instance | string | required | The output instance when multiple instances of the same type exist. Default is ‘0’ when only a single instance exists
-| value | string | required | The input or output value at time of discovery
-| config | List of **Configuration records**|optional|List of Configuration Records that describe in/output configuration. Only used when an input or output has their own configuration. See Node configuration record above for the definition
-| datatype | string | optional | Value datatype. One of boolean, enum, float, integer, jpeg, png, string, raw. Default is "string".
-| default | string | optional | Default output value
-| description | string | optional | Description of the in/output for humans
-| enum | list | optional* | List of possible values. Required when datatype is enum
-| max | number | optional | Maximum possible in/output value
-| min | number | optional | Minimum possible in/output value
-| unit | string | optional | The unit of the data type
-
-
-Example payload for node discovery in JSON format:
-```
-zone1/openzwave/5/$discover:
-{
-   "address": {
-      "zoneId": "zone1",
-      "publisherId": "openzwave",
-      "nodeId": "5",
-   },
-   "attr": {
-     "make": "AeoTec",
-     "type": "multisensor",
-      ...
-   },
-   "config": {
-      name: {
-          datatype: string,
-          default: “”,
-          description: “Friendly name of the node",
-          value: “barn multisensor”,
-      },
-      …
-   },
-   "inputs": [{
-      ...
-   }],
-   "outputs": [{
-     ...
-   }],
-   "timestamp": "2020-01-20T23:33:44.999PST",
-   "signature": "...",
-}
-```
-
-**Node Attribute Keys:**
+### Predefined Node Attributes
 
 | Key | Value Description  |
 |--------------|------------- |
@@ -504,14 +410,112 @@ zone1/openzwave/5/$discover:
 | version      | Hardware or firmware version
 
 
+
+
+Example payload for node discovery in JSON format:
+```
+zone1/openzwave/5/$discover:
+{
+   "zoneId": "zone1",
+   "publisherId": "openzwave",
+   "nodeId": "5",
+   
+   "attr": {
+     "make": "AeoTec",
+     "type": "multisensor",
+      ...
+   },
+   "config": {
+      "name": {
+          "datatype": string,
+          "description": “Friendly name of the node",
+          "value": “barn multisensor”,
+      },
+      …
+   },
+   "timestamp": "2020-01-20T23:33:44.999PST",
+   "signature": "...",
+}
+```
+
+## Input/Output Discovery
+
+Inputs and outputs discovery are published separately from the node to allow control over which ones are shared with other zones.
+
+MQTT/REST address formats:
+  >Input discovery:  **{zoneId} / {publisherId} / {nodeId} / {inputType} / {instance} / $discover**
+
+  >Output discovery: **{zoneId} / {publisherId} / {nodeId} / {outputType} / {instance} / $discover**
+
+### Input/Output discovery address structure
+
+| Address segment  | Description |
+| :--------------- | ----------- |
+| {zoneId} | The zone in which the node lives
+| {publisherId} | The service that is publishing the information. A publisher provides its identity when publishing a node discovery. The publisher Id is unique within its zone. 
+| {nodeId} | The node whose input or output is discovered. This is a device or a service identifier and unique within a publisher.
+| {inputType} | Type identifier of the input. The list of predefined types is part of this convention. 
+| {outputType} | Type identifier of the output. The list of predefined types is part of this convention. 
+| {instance} | The instance of the input or output on the node. If only a single instance exists the convention is to use 0 unless a name is used to provide more meaning.
+| $discover | Keyword for node discovery. 
+
+
+MQTT example:
+
+The discovery of a single temperature sensor on node '5', published by a service named 'openzwave' is published on an MQTT bus on topic:
+  > **myzone/openzwave/5/temperature/0/$discover**
+
+
+
+### Input/Output Discovery Payload
+
+| Field       | Data Type| Required     | Description
+|------------ |----------|----------    |------------
+| zoneId      | string   | **required** | The zone in which the node lives.
+| publisherId | string   | **required** | The service that is publishing the information. 
+| nodeId      | string   | **required** | The node whose in/output is discovered. 
+| ioType      | string   | **required** | Type identifier of the output. The list of predefined types is part of this convention. 
+| instance    | string   | **required** | The instance of the input or output on the node. Use 0 if only a single instance exists and names are not used.
+| config      | List of **Configuration Records**|optional|List of Configuration Records that describe in/output configuration. Only used when an input or output has their own configuration. See Node configuration record above for the definition
+| datatype  | string         | optional      | Value datatype. One of boolean, enum, float, integer, jpeg, png, string, raw. Default is "string".
+| default   | string    | optional | Default output value
+| description | string | optional | Description of the in/output for humans
+| enum      | list      | optional* | List of possible values. Required when datatype is enum
+| **instance** | string         | **required**  | The output instance when multiple instances of the same type
+| max       | number    | optional | Maximum possible in/output value
+| min       | number    | optional | Minimum possible in/output value
+| signature | string    | optional | Signature of this record signed by the publisher
+| timeStamp | string    | optional | Time the reocrd is created
+| **type**  | string    | **required**  | Type of input/output. See list below
+| unit      | string    | optional | The unit of the data type
+| **value** | string    | **required**  | The input or output value at time of discovery
+
+
+Example payload for output discovery in JSON format:
+```
+zone1/openzwave/5/temperature/0/$discover:
+{
+   "zoneId": "zone1",
+   "publisherId": "openzwave",
+   "nodeId": "5",
+   "datatype": "float",
+   "instance": "0",
+   "signature": "...",
+   "type": "temperature",
+   "timestamp": "2020-01-20T23:33:44.999PST",
+   "unit": "C",
+   "value": "20.5",
+}
+```
+
 # Node Configuration
 
 Nodes that can be configured contain a list of configuration records
 described in the node discovery. The configuration value can be updated
-with a configuration command as per below.
+with a configure command as per below.
 
 The configuration of a node can be updated by a consumer by publishing
-on the 'configure' address. The node publisher listens to this request
+on the '$configure' address. The node publisher listens to this request
 and processes it after validation.
 
 Only authorized users can modify the configuration of a node.
@@ -520,21 +524,22 @@ Only authorized users can modify the configuration of a node.
 
 > {zoneId}/{publisherId}/{nodeId}/$configure
 
-## Configure Payload
+## Configure Record Payload
 
 |Field 		     |type 		     |required 		     |Description
 |--------------|-------------|-----------------|-----------
-|address	     |Address      |optional 		     | Address of the node
-|config 	     |Dictionary   |required         | key-value pairs for configuration to update { key: value, …}
-|sender   		 |Address      |optional 		     | Address of the sender requesting to update the input. This is the publisherId of the consumer, if the consumer publishes.
-|signature 		 |string	     |optional 		     | Signature of this configuration record, signed by the consumer 			that wants to modify the configuration. The node publisher can verify if the consumer has permission to modify the configuration of the node.
-|timeStamp 		 |string	     |required 		     | Time this request was created, in ISO8601 format
+| zoneId       | string      | **required**    | The zone in which the node lives.
+| publisherId  | string      | **required**    | The service that is publishing the information. 
+| nodeId       | string      | **required**    | The node whose in/output is discovered. 
+| config 	     |Dictionary   | **required**    | key-value pairs for configuration to update { key: value, …}
+| sender   		 |Address      | optional 	     | Address of the sender submitting the request. This is the zone/publisherId/nodeId of the consumer.
+| signature		 |string	     | optional 	     | Signature of the sender of the configuration request. The receiving node publisher verifies if the sender address has permission to modify the configuration of the node before verifying and applying the update.
+| timeStamp		 |string	     | **required**    | Time this request was created, in ISO8601 format
 
 
 # Node Status
 
-The availability status of a node is published by its publisher when the
-availability changes or errors are encountered.
+The availability status of a node is published by its publisher when the availability changes or errors are encountered. Publishing of a node status is required.
 
 ## Status Address
 
@@ -545,152 +550,157 @@ availability changes or errors are encountered.
 | {zoneId}        | The zone in which discovery takes place. 
 | {publisherId}   | The publisher of the node discovery which is handling the configuration update for that node.
 | {nodeId}        | The node whose configuration is updated. 
-| \$status        | Keyword for node status. Published when the availability of a node changes or new errors are reported. It is published by the publisher of the node.
+| $status         | Keyword for node status. Published when the availability of a node changes or new errors are reported. It is published by the publisher of the node.
 
 
 
 ## Status Payload
 
-| Field 		     |   | type 		     |required 		     |Description
-|--------------- |---|----------     |------------     |-----------
-|address 		     |   | Address 		   | required 		   |Node address
-|status 		     |   | Status record | required 	     |Status record
-| | available        | enum (awake, asleep, missing)| required | The node is available
-| | errorCount       | integer      | optional        |Nr of errors since startup
-| | errorMessage     | string 	     | optional 	     |Last error message
-| | errorTime        | string 	     | optional		     |Timestamp of last error message in ISO8601 format
-| | lastSeen         | string	       | required		     |Timestamp in ISO8601 format that the publisher received information from the node.
-|signature       |   | string        |optional         |Signature of this configuration record, signed by the consumer that wants to modify the configuration. The node publisher can verify if the consumer has permission to modify the configuration of the node.
-|timeStamp       |   |string         |required         |Time the status was last updated, in ISO8601 format
+| Field 		      | type 		    | required 		    | Description
+|-----------------|----------   |------------     |-----------
+| zoneId          | string      | **required**    | The zone in which the node lives.
+| publisherId     | string      | **required**    | The service that is publishing the information. 
+| nodeId          | string      | **required**    | The node whose in/output is discovered. 
+| errorCount      | integer     | optional        | Nr of errors since startup
+| errorMessage    | string 	    | optional 	      | Last reported error message
+| errorTime       | string 	    | optional		    | Timestamp of last error message in ISO8601 format
+| interval        | integer     | **required**    | Maximum interval of status updates in seconds. If no updated status is received after this interval, the node is considered to be lost. 
+| lastSeen        | string	    | **required**	  | Timestamp in ISO8601 format that the publisher communicated with the node.
+| signature       | string      | optional        | Publisher signature of this record.
+| status          | enum        | **required**    | The node availability status. See below for valid values
+| timeStamp       | string      | **required**    | Time the status was last updated, in ISO8601 format
 
+Status values:
+* ready: node is ready to perform a task
+* asleep: node is a periodically listening and updates to the node can take a while before being processed.
+* error: node is in an error state and needs servicing
+* lost: communication with the node is lost
 
 
 # Trust & Digital Signatures
 
-Note: this section needs further review and a reference implementation.
+Note: this section needs further review and improvements.
 
 Trust is essential to information exchange between publishers and consumers, especially when the producer and consumer don't know each other directly. In this case trust means that the consumer can be sure
-that the publisher is who he claims to be.
+that the publisher is who he claims to be. This is achieved by including a publisher signature in every publication. The consumer can verify that the signature is valid and trust the information. 
 
 To this purpose, publishers include a [[digital signature]](https://en.wikipedia.org/wiki/Digital_signature)
-in their publications that lets the consumer verify the records
-originate from the publisher. [[This
+in their node publication that lets the consumer verify the records originate from the publisher. [[This
 tutorial]](https://www.tutorialspoint.com/cryptography/cryptography_digital_signatures.htm)
-explains it with a picture. Common digital signatures are:
+explains it with a picture. This convention uses **RSA-PSS** as the preferred digital signatures. This is used in OpenSSL and can be used with 'Lets Encrypt' (Needs verification).
 
 -   [[RSA-PSS]](https://en.wikipedia.org/wiki/Probabilistic_signature_scheme)
-    > part of [[PKCS\#1
-    > v2.1]{.underline}](https://en.wikipedia.org/wiki/PKCS_1) and used
-    > in OpenSSL
+    > part of [[PKCS#1 v2.1](https://en.wikipedia.org/wiki/PKCS_1) and used in OpenSSL
 
--   DSA and [[ECDSA]](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
-    > from NIST. NIST produced schemes are considered suspect as there
-    > are concerns the NSA has inserted backdoors.
+As security is constantly evolving, different schemes can be supported in the future.
 
-Therefore RSA-PSS is used in this convention. As security is evolving different future schemes allowed if the signature can identify the scheme to use.
+## Zone Certificate Authority Service - ZCAS
 
-## Verification Process
+Zones can be secured using a zone certificate authority service (ZCAS). The ZCAS that is responsible for verifying and issuing keys and certificates. It can work on behalf of a global Trusted Certificate Authority.
 
-Publishers generate a new key pair on first use and save them in a secure place. The public key is published with the publisher's node information. Consumers can decide to trust a publisher by saving their
-public key in a trust store. When information is received, the signature is verified with the public key of that publisher in the trust store. The implementation examples in the following paragraphs point to tools
-for each of these steps.
+Since the network topology is separate from the zone topology, the ZCAS and publishers can be on different networks and behind firewalls. Communication between ZCAS and publisher therefore uses the zone message bus.
 
-Consumers subscribe to publishers before using their information. During the subscription process, the user can be asked whether to trust this publisher and accept its public key or whether to consider the
-information unverified. If accepted, the public key is trusted and the information published by the publisher is verified against this key. If verification fails then the consumer is alerted and the information is
-ignored.
+Any bus communication is considered unsafe and must be protected against man-in-the-middle and spoofing attacks. All publications must be considered untrusted unless it is correctly signed. This includes publications by the ZCAS itself. 
 
-Before trusting a publisher's public key, the consumer must perform a verification that this key is indeed from the publisher. There are several options:
+The ZCAS has the reserved publisher ID of '\$zcas' with a reserved node ID of '\$zcas'. It publishes its own certificate (just like any other publisher) with its node on address '{zoneid}/\$zcas/\$zcas'
 
-1. Manually trust the publisher when subscribing to it.
+A ZCAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for the TCA is '{zoneid}.myzone.world'. Zoneid has to be globally unique. 
 
-   This should only be done when there is another way to verify the publisher's identity. For example, the publisher can include a certificate attribute that contains a certificate from Lets Encrypt. On presenting the certificate the consumer can decide to trust the publisher.
+The zoneId 'myzone' is reserved for local-only zones. In this case the ZCAS generates its own certificate and is considered the highest authority.
 
-2.  Add the publisher's public key using a USB key obtained straight from the publisher.
+**Joining the Secure Zone**
 
-3.  Add the publisher's public key from a trusted 3rd party.
+A publisher has to join the secure zone before it is issued a valid certificate by the ZCAS.
+
+The publisher has an initial public/private key pair which can be self generated or installed. This public key is included when the publisher publishes its own node but it is considered unverified as it has no valid certificate. The ZCAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. This is the process of joining the zone.
+
+The method used to join the zone can vary based on the situation. A secure method is to download the public key of the publisher with its publisher ID on a USB stick and use the USB stick to upload it to the ZCAS. The ZCAS now trusts the public key to belong to the publisherId and issues a new set of keys with a valid certificate (see below). Note that physical security of the ZCAS is always required.
+
+Another method to join a publisher to the security zone is to have the ZCAS present a web page where a (human) administrator can log in and upload the publisher's public key with its publisher ID. This moves the trust to that of the administrator login. Two factor authentication should be used.
+
+**Key and Certificate Renewal**
+
+A publisher can not request a new certificate. Instead, it is issued new keys and certificate by the ZCAS automatically when its certificate has less than half its life left. This is triggered when a publisher publishes its own node information on address '{zoneid}/{publisherid}/\$publisher' using a valid signature.
+
+A publisher is issued its certificate on address: {zoneid}/\{publisherId}/\$zcas. This contains an encrypted payload with the public key, private key and certificate. The payload is encrypted with the last known valid public key of this publisher. Only the publisher for whom it is intended can decypher it. The keys and certificate are valid for a restricted period of time. The default is 30 days. 
+
+Once a publisher uses the newly issued key and certificate, ZCAS removes the old key from its records. This key can no longer be used to obtain a new key and certificate even if they were still valid. It is therefore important that the publisher persists the new key and certificate before publishing using the new keys.
+
+This means that publishers subscribe to address '{zoneid}/{publisherId}/\$zcas' while ZCAS subscribes to the publisher discovery address '{zoneId}/{publisherId}/\$publisher'. It can also use a wildcard for publisherid. 
+
+**Verifying Signatures**
+
+When a consumer receives node output, the message is signed by the node publisher. The consumer must verify the validity of the signature using the public key of the publisher. The verification takes place using the message content with the signature left blank and the publisher's public key.
+If the verification fails the message is discarded. The number of discarded messages is tracked for each publisher and can be used to show an alert in a dashboard.
+
+The public key of the publisher and its certificate are included with the publisher node discovery message. The public key is used to verify messages while the certificate is used to verify that the public key belongs to this publisher.
+
+When receiving the publisher discovery message, the consumer must therefor verify that the publisher's certificate is valid by checking its signature with the public key of the ZCAS that issued it.
+
+If the message is from another zone, then the certificate must also be verified against the public key of the TCA.
+
+**Policing Publications**
+
+The ZCAS has a secondary function to monitor node publications and verify that the certificate and public key are valid. If an invalid publication is detected then a notice is send to the administrator.
 
 # Zone Bridging
 
-The purpose of a Zone Bridge is to export information from one zone to the information bus of another zone. This is based on the design that each zone has its own information bus and all subscribers on a bus can read all zones on that bus.
+The purpose of a Zone Bridge is to export information from one zone to the message bus of another zone. This is only applicable when the zones are on a different message bus. In the case where multiple zones are publishing on the same bus there is no need for a bridge as consumers can just subscribe to the zone using the bus they are already on.
 
-In case multiple zones are on the same bus, and each connection is restricted to its own zone, an access control service is needed. This is beyond the scope of this bridge.
+The bridge subscribes to nodes to be exported and forwards (re-publishes) information onto the message bus of the bridged zone. The original publication and the address remains unchanged. 
 
-The bridge subscribes to outputs of nodes to be exported and republishes information onto the information bus of the other zone. The original node's information and zone remains unchanged. The zone information now becomes available from the information bus of the second zone.
+The bridge service has facility to select which nodes, inputs or outputs are bridged. 
 
-  * zone-A / publisher-B / node-C [/type/instance]  ->  information bus of zone-B [connection]
-  * The information bus of zone-B now publishes information from both zones.
+**Bridge Service**
+A zone can have one or multiple bridge services. A bridge forwards selected publications to another zone without modifying it. The bridge service is a publisher and has a nodeId of $bridge. The publisherId differs per bridge instance. 
 
-The reference implementation has input pushbuttons for adding and removing inputs and outputs. 
+A bridge connects to a single remote bus. The connection attributes are part of the bridge configuration.
 
-**Bridge (input) control addresses (for managing inputs and outputs)**
-
-Manage bridges by adding and removing them. Each bridge is a node that is configured to connect to another information bus. 
-MQTT Example:
-* {zoneId} / {publisherId} / $bridgemanager / $pushbutton / $addBridge    - payload is the bridge nodeId
-* {zoneId} / {publisherId} / $bridgemanager / $pushbutton / $removeBridge - payload is the bridge nodeId
-
-Address segments:
-
-| Field 		     | Description
-|--------------- |-----------
-| {zoneId} | The zone the bridge lives in.
-| {publisherId}  | The publisher of the bridge. This is the bridge managers Id. Usually there is only a single bridge manager and its ID is "bridge".
-| $bridgemanager | Keyword of the node that manages the bridges. There is only 1 bridge manager per publisher
-| $pushbutton    | Node input is a push button for adding/removing a bridge instance
-| $addBridge     | button to add a new bridge instance. The input payload is its node Id, eg 'bridge-1'
-| $removeBridge  | button to remove a bridge instance. The input payload is its node ID, eg 'bridge-1'
-
-
-**Bridge node configuration fields**
-After adding a new bridge, it can be configured with the connection to another information bus. The configuration fields include:
-
-| Field 		   | type 		    |value 		     | Description
+Bridge configuration
+| Field 		   | value type   | value 		     | Description
 |------------- |----------    |------------  |-----------
-| address      | string       | required     | IP address or hostname to connect to
+| host         | string       | **required** | IP address or hostname of the remote bus
 | port         | integer      | optional     | port to connect to. Default is determined by protocol
 | protocol     | enum ["MQTT", "REST"] | optional  | Protocol to use, MQTT (default), REST API, ...
-| format       | enum ["JSON", "XML"]  | optional  | Publishing format used on the external bus. Default is JSON
-| clientId     | string       | required     | ID of the client that is connecting
+| format       | enum ["JSON", "XML"]  | optional  | Publishing format used on the external bus. Default is JSON. Only include this if a different format is needed. This will invalidate the signature.
+| clientId     | string       | **required** | ID of the client that is connecting
 | loginId      | string       | optional     | Login identifier
 | credentials  | string       | optional     | Password to connect
-| exValue      | boolean      | optional     | Export the node $value publication(s), default=true
-| exLatest     | boolean      | optional     | Export the node $latest publication(s), default=true
-| exHistory    | boolean      | optional     | Export the node $history publication(s), default=true
-| exDiscovery  | boolean      | optional     | Export the node $discovery publication, default=true
-| exStatus     | boolean      | optional     | Export the node $status publication, default=true
+
 
 **Add/remove nodes to export**
-To add exported nodes to the bridge use the following pushbuttons for the bridge instance.
+To forward nodes through the bridge, use the pushbuttons for $forward and $remove.
 
 MQTT Example:
-* {zoneId} / {publisherId} / {bridgeId} / $pushbutton / $addNode
-* {zoneId} / {publisherId} / {bridgeId} / $pushbutton / $removeNode
+* {zoneId} / {publisherId} / \$bridge / $pushbutton / $forward
+* {zoneId} / {publisherId} / \$bridge / $pushbutton / $remove
 
 Address segments:
 
 | Field 		     | Description
 |--------------- |------------|
-| {zoneId} | The zone the bridge lives in.
-| {publisherId}  | The publisher of the bridge. This is the bridge managers Id. Usually there is only a single bridge manager and its ID is "bridge".
-| $bridgemanager | Keyword of the node that manages the bridges. There is only 1 bridge manager per publisher
-| $pushbutton    | Node input is a push button for adding/removing a bridge instance
-| $addNode     | button to add a node for export by this bridge. 
-| $removeNode  | button to remove a node from export by this bridge. 
+| {zoneId}       | The zone the bridge lives in.
+| {publisherId}  | The publisher of the bridge.
+| $bridge        | Reserved ID of a bridge node.
+| $pushbutton    | Input type 
+| $forward       | button instance to add a forward. Payload contains the address record.
+| $remove        | button instance to remove a forward. Payload is the address record
 
-**$addNode payload is the input configuration**
 
-| Field 		     | type 		  | required        | Description
-|--------------- |----------  |------------     |-----------
-| zoneId         | string     | required        | The zone the node lives in
-| publisherId    | string     | required        | The publisher of the node to export
-| nodeId         | string     | required        | The node to export
-| type           | string     | optional        | type of output to export. Default is all node outputs
-| instance       | string     | optional        | instance of output type to export. Default is all instances
-| exValue        | boolean    | optional        | Export the node $value publication(s), default=true
-| exLatest       | boolean    | optional        | Export the node $latest publication(s), default=true
-| exHistory      | boolean    | optional        | Export the node $history publication(s), default=true
-| exDiscovery    | boolean    | optional        | Export the node $discovery publication, default=true
-| exStatus       | boolean    | optional        | Export the node $status publication, default=true
+Payload:
+| Field 		   | type 		    |value 		     | Description
+|------------- |----------    |------------  |-----------
+| zoneId       | string       | required     | The zone the node lives in
+| publisherId  | string       | required     | The publisher of the node to export
+| nodeId       | string       | required     | The node to export
+| type         | string       | optional     | Output type to forward in when only forwarding an output
+| instance     | string       | optional     | Output instance to forward in when only forwarding an output
+| fwdValue     | boolean      | optional     | Forward the output $value publication(s), default=true
+| fwdLatest    | boolean      | optional     | Forward the output $latest publication(s), default=true
+| fwdHistory   | boolean      | optional     | Forward the output $history publication(s), default=true
+| fwdDiscovery | boolean      | optional     | Forward the node/output $discovery publication, default=true
+| fwdStatus    | boolean      | optional     | Forward the node $status publication, default=true
+
 
 
 
