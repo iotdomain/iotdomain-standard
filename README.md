@@ -2,20 +2,20 @@
 
 **Status:**
 
-*This convention is currently v0. It is based on a working proof of concept that was built with an earlier version of this convention. This is not considered final until the official v1 release.*
+*This standard is currently v0. It is based on a working proof of concept that was built with an earlier version. This is not considered final until the official v1 release.*
 
-*The working reference implementation that is based on an earlier version of this convention is currently (Jan 2020) being updated. As publishers are converted they will be added to the reference implemention for this version. This includes publishers for openzwave, onewire, isy99, ipnetwork, webcam, wallpaper and a dashboard*. 
+*The working reference implementation that is based on an earlier version of this standard is currently (Jan 2020) being updated. As publishers are converted they will be added to the reference implemention for this version. This includes publishers for openzwave, onewire, isy99, ipnetwork, webcam, wallpaper and a dashboard*. 
 
 
-# The MyZone Convention
+# The MyZone Standard
 
-This is a convention for discovery and exchange of information from IoT devices, services and other sources. The goal is to provide interoperability between a wide range of IoT devices and other information sources to build a true information network.
+This is a standard for discovery and exchange of information from IoT devices, services and other sources. The goal is to provide interoperability between a wide range of IoT devices and other information sources to build a true information network.
 
-The convention is technology agnostic and can be implemented with programming languages and message bus of choice. This convention defines the addressing and data fields neccesary for discovery and exchange of information.
+The standard is technology agnostic and can be implemented with programming languages and message bus of choice. This standard defines the addressing and data fields neccesary for discovery and exchange of information.
 
-A reference implementation in the golang language is provided for publishing zwave, onewire, and camera images, as well as a basic user interface with a dashboard and configuraiton editor.
+A reference implementation in the golang language is provided for publishing zwave, onewire, and camera images, as well as a basic user interface with a dashboard and configuration editor.
 
-The convention can be found here:  [CONVENTION](./myzone-convention.md)
+The standard can be found here:  [MYZONE STANDARD](./myzone-convention.md)
 
 ## Installation
 
