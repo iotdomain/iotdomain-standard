@@ -1,0 +1,26 @@
+---
+title: MyZone - Information Exchange for IoT devices and Services
+abbrev: myzone
+docname: draft-myzone-00
+category: info
+
+area: iot
+ipr: trust200902
+keyword: Internet-Draft
+
+stand_alone: yes
+pi: [toc, sortrefs, symrefs, comments]
+
+author:
+  -
+    ins: H.Spaay
+    name: H. Spaay
+
+--- abstract
+
+Myzone is an information exchange standard for IoT devices, services and other information producers and consumers.
+
+Current status: Draft
+
+
+--- middle
