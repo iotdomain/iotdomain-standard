@@ -1,3 +1,8 @@
+The MyZone Standard
+===================
+
+This standard defines the rules and formats of exchanging information between publishers and consumers of IoT and other services.
+
 # Introduction
 
 As connected devices become more and more prevalent, so have the problems surrounding them. These problems fall into multiple categories: 
@@ -63,18 +68,18 @@ This standard defines the security aspects build into the specification.
 | Retainment    | A feature of a message bus that remembers that last published message. Not all message busses support retainment. It is used in publishing the values and discovery messages so new clients receive an instant update of the latest information |
 | Subscriber    | Consumer of information that uses node address to subscribe to information from that node.|
 | ZBM           | Zone Bridge Manager. Manages bridges to share information with other zones.
-| ZCAS          | Zone Certificate Authority Service. This service manages keys and certificates of zone members |
+| ZSAS          | Zone Signature Authority Service. This service manages keys and signatures of zone members |
 | ZSM           | Zone Security Monitor. Monitors publications in a zone and watches for intrusions.|
 | Zone          | An area in which information is shared between members of a zone. |
 
 
 # Versioning
 
-The standard uses semantic versioning in the form v\{major}.\{minor}\[-RC\{N}]. Where RC-\{N} is only used for release candidates of the final version. 
+The standard uses semantic versioning in the form v\{major}.\{minor}.
 
-Future minor version upgrades of this convention must remain backwards compatible. New fields can be added but must be optional. Implementations must accept and ignore unknown fields and in general follow the [robustness principle](https://engineering.klarna.com/why-you-should-follow-the-robustness-principle-in-your-apis-b77bd9393e4b)
+Future minor version upgrades of this standard must remain backwards compatible. New fields can be added but must be optional. Implementations must accept and ignore unknown fields and in general follow the [robustness principle](https://engineering.klarna.com/why-you-should-follow-the-robustness-principle-in-your-apis-b77bd9393e4b)
 
-A major version upgrade of this convention is not required to be backwards compatible but **must** be able to co-exists on the same bus. Implementations must ignore messages with a higher major version.
+A major version upgrade of this standard is not required to be backwards compatible but **must** be able to co-exists on the same bus. Implementations must ignore messages with a higher major version.
 
 Publishers include their version of the MyZone standard when publishing their node. See 'discovery' for more information.
 
@@ -106,7 +111,7 @@ The use of message bus has a key role in exchange and security of information in
 
 A message bus carries only publications for the zone it is intended for. Multi-zone or multi-tenant message busses can be used but each zone must be fully isolated from other zones. Note that a bridge can publish messages from one zone into another. More on this below.
 
-As the network topology is separate from the zone topology, publishers and subscribers in a zone can be on different networks and behind firewalls. This reduces the attack footprint as none of the publishers or subscribers need to be accessible from the internet. The message bus is the only directly exposed part of the system. It is key to make sure the message bus is properly secured and hardened. For more on securing communication see the ZCAS section.
+As the network topology is separate from the zone topology, publishers and subscribers in a zone can be on different networks and behind firewalls. This reduces the attack footprint as none of the publishers or subscribers need to be accessible from the internet. The message bus is the only directly exposed part of the system. It is key to make sure the message bus is properly secured and hardened. For more on securing communication see the security section.
 
 The message bus must be configured to require proper credentials of publishers. Open zones can allow subscribers to omit credentials.
 
@@ -114,7 +119,7 @@ The message bus must be configured to require proper credentials of publishers. 
 
 This standard is agnostic to the message bus implementation and its transport protocol. However, publishers must as a minimum implement support for the MQTT transport protocol. Support for additional transports such as AMQP and HTTP with websockets is optional. 
 
-The reason to choose MQTT as the defacto default is because a defacto standard is needed for interoperability, it is low overhead, well supported, supports LWT (Last Will & Testament), has QOS, and clients can operate on constrained devices. It is by no means the ideal choice as explained in [this article by Clemens Vasters](https://vasters.com/archive/MQTT-An-Implementers-Perspective.html). 
+The reason to choose MQTT as the defacto default is because a defacto standard is needed for interoperability, it is low overhead, well supported, supports LWT (Last Will & Testament), has QOS, and clients can operate on constrained devices. It is by no means the ideal choice as explained in [this article by Clemens Vasters](https://vasters.com/archive/MQTT-An-Implementers-Perspective.html)
 
 If in future a better protocol becomes the defacto standard, the MQTT protocol will remain supported as a fallback option. 
 
@@ -162,7 +167,7 @@ Nodes that are not compatible with this standard require an 'adapter' that publi
 
 For example, a ZWave adapter can obtain sensor data from ZWave nodes via a ZWave controller (gateway), and publish information of the ZWave nodes that are connected to this controller. The adapter, the gateway and each zwave device is represented as a node. 
 
-Publishers must use credentials to connect to a zone's message bus before they can publish. To publish securely, a publisher must also have to joined the zone through the Zone Authentication Service (ZCAS). More on that later.
+Publishers must use credentials to connect to a zone's message bus before they can publish. To publish securely, a publisher must also have to joined the zone through the Zone Signature Authority Service (ZSAS). More on that later.
 
 Publishers are responsible for:
 
@@ -194,8 +199,8 @@ For message bus systems that do not support the '/' character as address separat
 
 **Reserved commands:**
 
-| command     | purpose |
-|:--------    |:--------|
+| command      | purpose |
+|:--------     |:--------|
 | \$batch      | Publication of a batch of events |
 | \$configure  | Command to update the node configuration |
 | \$event      | Publication of a single event with multiple values |
@@ -207,7 +212,7 @@ For message bus systems that do not support the '/' character as address separat
 | \$set        | Control the input value of a node, must be followed by an input type and instance |
 | \$status     | Publication of the node status |
 | \$value      | Publication of an output sensor value without metadata. Must be followed by an output type and instance |
-| \$zcas       | Set the keys and certificate of a publisher (encrypted) |
+| \$zsas       | Set the keys and signature of a publisher (encrypted) |
 
 
 ## Subscribers
@@ -217,15 +222,11 @@ Anyone with permission to connect to the message bus can subscribe to messages p
 Consumers like user interfaces and services that do not publish are merely subscribers and do not classify as nodes. Open zones can allow anyone to subscribe without credentials.
 
 
-## Zone Certificate Authority Service - ZCAS
+## Zone Signature Authority Service - ZSAS
 
-Securing a zone means ensuring that the information can be trusted, its source can be verified, and the information is only accessible to the members of that zone. 
+The Zone Signature Authority Service issues keys to publishers that have joined the security zone. Publisher use these keys to create a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) for each message they publish so consumers can verify they come from the publisher and haven't been tampered with. The publisher identity information is signed by the ZSAS when the publisher joined the zone and verifies that the publisher is who it claims to be. For local zones the ZSAS is the highest authority and is protected by the message bus only allowing that service to publish on its address. For public zones the ZSAS itself includes a certificate for its domain in its identity.
 
-This is achieved by including a publisher signature in every publication. The consumer can verify that the signature is valid and trust the information. To this purpose, publishers include a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) in their node publication that lets the consumer verify the records originate from the publisher. 
-
-This standard uses **RSA-PSS** to generate digital signatures. This is used in OpenSSL. See also: [RSA-PSS](https://en.wikipedia.org/wiki/Probabilistic_signature_scheme), part of [PKCS#1 v2.1](https://en.wikipedia.org/wiki/PKCS_1) and used in OpenSSL. As security is constantly evolving, different schemes can be supported in the future.
-
-The keys and certificates needed for this are provided by the Zone Certificate Authority Services - ZCAS.
+For more detail, see the security section
 
 # Publishing Output Values
 
@@ -241,7 +242,7 @@ Address format:  **\{zone}/\{publisher}/\{node}/\{command}/\[\{type}/\{instance}
 | {publisher}     | The service that is publishing the information. A publisher provides its identity when publishing its discovery. The publisher Id is unique within its zone.|
 | {node}          | The node that owns the input or output. This is a device identifier or a service identifier and unique within a publisher.|
 | {command}       | Command that indicates the purpose of the publication. Each command is described in more detail in the following paragraphs.|
-| {type}          | The type of  input or output, eg temperature. This convention includes a list of output types. |
+| {type}          | The type of  input or output, eg temperature. This standard includes a list of output types. |
 | {instance}      | The instance of the type on the node. For example, a node can have two temperature sensors. The combination type + instance is unique for the node. The instance can be a name or number. If only a single instance exists the instance can be shortened to “_” |
 
  With exception of the \$value command, all publications contain a payload consisting of a JSON object with a message and signature:
@@ -282,7 +283,7 @@ Address:  **\{zone}/\{publisher}/\{node}/\$latest/\{type}/\{instance}**
 The message structure is as follows:
 
 | Field        | Data Type | Required     | Description |
-|--------------|-----------|------------- |------------ |
+|:-------------|:----------|:------------ |:----------- |
 | address      | string    | **required** | The address on which the message is published |
 | sender       | string    | **required** | Address of the publisher node of the message |
 | timestamp    | string    | **required** | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
@@ -296,8 +297,8 @@ Example of a publication on zone-1/openzwave/6/\$latest/temperature/0:
 ~~~json
 {
   "message": {
-    "address": "zone-1/openzwave/6/\$latest/temperature/0/",
-    "sender": "zone-1/openzwave/\$publisher",
+    "address": "zone-1/openzwave/6/$latest/temperature/0/",
+    "sender": "zone-1/openzwave/$publisher",
     "timestamp": "2020-01-16T15:00:01.000PST",
     "unit": "C",
     "value": "20.6",
@@ -317,7 +318,7 @@ Address:  **\{zone}/\{publisher}/\{node}/\$history/\{type}/\{instance}**
 The message structure:
 
 | Field        | Data Type | Required     | Description |
-| ----------   | --------  | -----------  | ------------ |
+|:----------   |:--------  |:-----------  |:------------ |
 | address      | string    | **required** | The address on which the message is published |
 | duration     | integer   | optional     | Nr of seconds of history. Default is 24 hours (24*3600 seconds)
 | history      | list      | **required** | eg: \[\{"timestamp": "YYYY-MM-DDTHH:MM:SS.sssTZ","value": string}, ...] |
@@ -333,14 +334,14 @@ For example:
 zone-1/openzwave/6/temperature/0/\$history:
 {
   "message": {
-    "address" : "zone-1/openzwave/6/\$history/temperature/0",
+    "address" : "zone-1/openzwave/6/$history/temperature/0",
     "duration": "86400",
     "history" : [
       {"timestamp": "2020-01-16T15:20:01.000PST", "value" : "20.4" },
       {"timestamp": "2020-01-16T15:00:01.000PST", "value" : "20.6" },
       ...
     ],
-    "sender": "zone-1/openzwave/\$publisher",
+    "sender": "zone-1/openzwave/$publisher",
     "unit": "C",
   },
   "signature": "...",
@@ -356,7 +357,7 @@ Address:  **\{zone}/\{publisher}/\{node}/\$event**
 The message structure:
 
 | Field        | Data Type | Required     | Description |
-| ----------   | --------  | -----------  | ------------ |
+|:----------   |:--------  |:-----------  |:------------ |
 | address      | string    | **required** | The address on which the message is published, zone/publisher/node/\$outputs |
 | event        | map       | **required** | Map with {output type/instance : value} 
 | sender       | string    | **required** | Address of the publisher node of the message |
@@ -368,7 +369,7 @@ For Example:
 zone-1/vehicle-1/\$publisher/\$event:
 {
   "message" : {
-    "address" : "zone-1/vehicle-1/\$publisher/\$event",
+    "address" : "zone-1/vehicle-1/$publisher/$event",
     "event" : [
       {"speed/0": "30.2" },
       {"heading/0": "165" },
@@ -376,7 +377,7 @@ zone-1/vehicle-1/\$publisher/\$event:
       {"odometer/ecu": "2514333222" },
       ...
     ],
-    "sender": "zone-1/vehicle-1/\$publisher",
+    "sender": "zone-1/vehicle-1/$publisher",
     "timestamp": "2020-01-16T15:00:01.000PST",
   },
   "signature": "...",
@@ -392,7 +393,7 @@ Address:  **\{zone}/\{publisher}/\{node}/\$batch**
 The message structure:
 
 | Field        | Data Type | Required     | Description |
-| ----------   | --------  | -----------  | ------------ |
+|:----------   |:--------  |:-----------  |:------------ |
 | address      | string    | **required** | The address on which the message is published, eg zone/publisher/node/\$batch |
 | batch        | list      | **required** | Time ordered list of events with their timestamp, oldest first and newest last.
 || timestamp   | string    | timestamp of the event in ISO8601 format "YYYY-MM-DDTHH:MM:SS.sssTZ" |
@@ -409,7 +410,7 @@ Address:  **\{zone}/\{publisher}/\{node}/\$set/\{type}/\{instance}**
 The message structure:
 
 | Field        | Data Type | Required      | Description
-|------------- |-----------|----------     |------ 
+|:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required**  | The address on which the message is published |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
 | sender       | string    | **required** | Address of the publisher node of the message |
@@ -421,8 +422,8 @@ For Example:
 zone-1/openzwave/6/\$set/switch/0:
 {
   "message": {
-    "address" : "zone-1/openzwave/6/\$set/switch/0",
-    "sender": "zone-1/mrbob/\$publisher",
+    "address" : "zone-1/openzwave/6/$set/switch/0",
+    "sender": "zone-1/mrbob/$publisher",
     "timestamp": "2020-01-02T22:03:03.000PST",
     "value": "true",
   },
@@ -457,7 +458,7 @@ If the node is the publisher itself then the reserved '\$publisher' node identif
   >  **\{zone}/\{publisher}/\{node}/\$publisher**
 
 |Address segment| Description |
-| ------------- | ----------- |
+|:------------- |:----------- |
 | {zone}        | The zone in which the node lives |
 | {publisher}   | The ID of the publisher of the information. The publisher Id is unique within its zone. |
 | {node}        | The node that is discovered. This is a device or a service identifier and unique within a publisher. A special ID of “$publisher” is reserved for nodes that are publishes. |
@@ -467,31 +468,45 @@ If the node is the publisher itself then the reserved '\$publisher' node identif
 Node discovery message structure:
 
 | Field        | Data Type | Required     | Description
-| -----------  |---------- |----------    |------------
+|:-----------  |:--------- |:----------   |:------------
 | address      | string    | **required** | The address on which the message is published |
-| attr         | map       | **required** | Attributes describing the node. Collection of key-value string pairs that describe the node. The list of predefined attribute keys are part of the convention. See appendix B: Predefined Node Attributes. |
+| attr         | map       | **required** | Attributes describing the node. Collection of key-value string pairs that describe the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
 | config       | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the configuration options. These can be modified with a ‘$configure’ message.|
 | sender       | string    | **required** | Address of the publisher node of the message |
 | timestamp    | string    | **required** | Time the record is created |
-| certificate  | string    | optional     | A certificate from a trusted source like Lets Encrypt. It is included in publisher nodes that have joined the zone |
-| publicKey    | string    | **required** | Publisher's public key. It is included in publisher nodes and used verify the signature and encrypt messages for this publisher. |
-
+| identity     | Identity  | publishers   | Publisher identity used to identify the publisher in secure zones. Includes public keys for signing and encryption. Only included with publishers |
+| identitySig  | string    | optional     | Signature of the identity signed by the ZSAS. Empty for publishers that have not joined the secure zone.
 
 **Configuration Record**
 
 The configuration record is used in both node configuration and input/output configuration. Each configuration attribute is described in a record as follows:
 
-| Field    | Data Type| Required | Description |
-|--------  |----------|----------|------------ |
-| name     | string   | **required** | Name of the configuration. This has to be unique within the list of configuration records. See also Appendix C: Predefined Configuration Names |
-| datatype | enum     | optional| Type of value. Used to determine the editor to use for the value. One of: bool, enum, float, int, string. Default is ‘string’ |
-| default  | string   | optional| Default value for this configuration in string format |
-| description| string | optional | Description of the configuration for human use |
+| Field    | Data Type | Required  | Description |
+|:-------- |:--------- |:--------- |:----------- |
+| name     | string    | **required** | Name of the configuration. This has to be unique within the list of configuration records. See also Appendix C: Predefined Configuration Names |
+| datatype | enum      | optional| Type of value. Used to determine the editor to use for the value. One of: bool, enum, float, int, string. Default is ‘string’ |
+| default  | string    | optional| Default value for this configuration in string format |
+| description| string  | optional | Description of the configuration for human use |
 | enum     | \[strings] | optional* | List of valid enum values as strings. Required when datatype is enum |
-| max      | float    | optional | Optional maximum value for numeric data |
-| min      | float    | optional | Optional minimum value for numeric data | 
-| secret   | bool     | optional | Optional flag that the configuration value is secret and will be left empty. When a secret configuration is set in \$configure, the value is encrypted with the publisher node public key. |
-| value    | string   | **required**| The current configuration value in string format. If empty, the default value is used if provided. |
+| max      | float     | optional | Optional maximum value for numeric data |
+| min      | float     | optional | Optional minimum value for numeric data | 
+| secret   | bool      | optional | Optional flag that the configuration value is secret and will be left empty. When a secret configuration is set in \$configure, the value is encrypted with the publisher node public key. |
+| value    | string    | **required**| The current configuration value in string format. If empty, the default value is used if provided. |
+
+**Identity Record**
+
+The identity record is included with nodes that are publishers and is intended to verify the identity of the publisher. It is signed by the ZSAS when the publisher joins a secure zone and renewed periodically. Consumers must verify the signature using the ZSAS public key when the publisher node is updated.
+
+| Field        | type     | required     | Description |
+|:------------ |:-------- | :----------  |:----------- |
+| address      | string   | **required** | The address of the publisher node |
+| encPublicKey | string   | **required** | The publisher new public key for encrypting messages for the publisher | 
+| expires      | string   | **required** | ISO8601 Date this identity expires |
+| location     | string   | optional     | Location of the publisher |
+| organization | string   | optional     | Organization the publisher belongs to |
+| sigPublicKey | string   | **required** | The public key for verifying publisher signatures |
+| timestamp    | string   | **required** | Time the identity was re-signed |
+| url          | string   | optional     | URL of home page of the publisher |
 
 
 Example payload for node discovery
@@ -500,7 +515,7 @@ Example payload for node discovery
 zone-2/openzwave/5/\$node:
 {
   "message": {
-    "address": "zone-2/openzwave/5/\$node",
+    "address": "zone-2/openzwave/5/$node",
    
     "attr": {
       "make": "AeoTec",
@@ -514,7 +529,7 @@ zone-2/openzwave/5/\$node:
       }, 
     },
     "timestamp": "2020-01-20T23:33:44.999PST",
-    "sender": "zone-2/openzwave/\$publisher"
+    "sender": "zone-2/openzwave/$publisher"
   },
   "signature": "..."
 }
@@ -533,7 +548,7 @@ Address of output discovery:
 > **\{zone}/\{publisher}/\{node}/\$output/\{outputType}/\{instance}**
 
 | Address segment | Description |
-| :-------------- | ----------- |
+| :-------------- | :---------- |
 | {zone}       | The zone in which the node lives |
 | {publisher}  | The service that is publishing the information. A publisher provides its identity when publishing a node discovery. The publisher Id is unique within its zone.  |
 | {node}       | The node whose input or output is discovered. This is a device or a service identifier and unique within a publisher. |
@@ -541,7 +556,7 @@ Address of output discovery:
 | {inputType}  | Type identifier of the input. For a list of predefined types see Appendix D |
 | \$output     | Command for output discovery. |
 | {outputType} | Type identifier of the output. For a list of predefined types see Appendix D |
-| {instance}   | The instance of the input or output on the node. If only a single instance exists the convention is to use 0 unless a name is used to provide more meaning. |
+| {instance}   | The instance of the input or output on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning. |
 
 For example, the discovery of a temperature sensor on node '5', published by a service named 'openzwave', is published on address:
 
@@ -550,7 +565,7 @@ For example, the discovery of a temperature sensor on node '5', published by a s
 The message structure:
 
 | Field       | Data Type | Required     | Description |
-|------------ |---------- |----------    |------------ |
+|:----------- |:--------- |:---------    |:----------- |
 | address     | string    | **required** | The address on which the message is published |
 | config      | List of **Configuration Records**|optional|List of Configuration Records that describe in/output configuration. Only used when an input or output has their own configuration. See Node configuration record above for the definition |
 | datatype    | string    | optional     | Value datatype. One of boolean, enum, float, integer, jpeg, png, string, raw. Default is "string". |
@@ -569,9 +584,9 @@ Example payload for output discovery:
 zone1/openzwave/5/\$output/temperature/0:
 {
   "message": {
-    "address": "zone1/openzwave/5/\$output/temperature/0",
+    "address": "zone1/openzwave/5/$output/temperature/0",
     "datatype": "float",
-    "sender": "zone1/openzwave/\$publisher",
+    "sender": "zone1/openzwave/$publisher",
     "timestamp": "2020-01-20T23:33:44.999PST",
     "unit": "C",
     "value": "20.5",
@@ -595,9 +610,9 @@ Address:  **\{zone}/{publisher}/{node}/\$configure**
 Configuration Message structure:
 
 | Field       | type     | required     | Description
-|--------------|----------|--------------|-----------
-| address      | string   | **required** | The address on which the message is published |
-| config       | map      | **required** | key-value pairs for configuration to update { key: value, …}. **Only fields that require change should be included**. Existing fields remain unchanged.
+|:----------- |:-------- |:------------ |:----------
+| address     | string   | **required** | The address on which the message is published |
+| config      | map      | **required** | key-value pairs for configuration to update { key: value, …}. **Only fields that require change should be included**. Existing fields remain unchanged.
 | sender      | string   | **required** | Address of the sender submitting the request. This is the zone/publisher/node of the consumer.
 | timestamp   | string   | **required**    | Time this request was created, in ISO8601 format
 
@@ -608,8 +623,8 @@ Example payload for node configuration:
 zone1/openzwave/5/\$configure:
 {
   "message": {
-    "address": "zone1/openzwave/5/\$configure",
-    "sender": "zone1/openzwave/\$publisher",
+    "address": "zone1/openzwave/5/$configure",
+    "sender": "zone1/openzwave/$publisher",
     "timestamp": "2020-01-20T23:33:44.999PST",
     "config": {
       "name": "My new name"
@@ -626,7 +641,7 @@ The availability status of a node is published by its publisher when the availab
 Address:  **\{zone}/\{publisher}/\{node}/\$status**
 
 | Address segment | Description
-|-----------------|--------------
+|:--------------- |:------------
 | {zone}          | The zone in which discovery takes place. 
 | {publisher}     | The publisher of the node discovery which is handling the configuration update for that node.
 | {node}          | The node whose configuration is updated. 
@@ -635,8 +650,8 @@ Address:  **\{zone}/\{publisher}/\{node}/\$status**
 
 Message Structure:
 
-| Field      | type     | required     | Description |
-|--------------|--------- |------------  |------------ |
+| Field        | type     | required     | Description |
+|:-----------  |:-------- |:-----------  |:----------- |
 | address      | string   | **required** | The address on which the message is published |
 | errorCount   | integer  | optional     | Nr of errors since startup |
 | errorMessage | string   | optional     | Last reported error message |
@@ -665,9 +680,9 @@ To obtain a certificate the publisher must join a secure zone as described below
 
 ## Joining A Secure Zone
 
-A publisher joins the zone in order to receive keys and certificate that can be verified by subscribers.
+A publisher joins the zone in order to receive keys and signature that can be verified by subscribers.
 
-Keys and certificate are issued by the Zone Certificate Authority Service - ZCAS - to receive keys and a certificate. The ZCAS can work with a global Trusted Certificate Authority. This is required to verify signatures when sharing messages between zones.
+Keys and signature are issued by the Zone Signature Authority Service - ZSAS. The ZSAS can work with a global Trusted Certificate Authority. This is required to verify signatures when sharing messages between zones.
 
 The steps to join the zone:
 1. Generate a temporary keyset
@@ -677,68 +692,70 @@ The steps to join the zone:
 
 **Generating a temporary keyset**
 
-Initially the publisher must create their own private and public keyset. Use available libraries for this. For example:
-
-~~~golang
-  // https://github.com/brainattica/Golang-RSA-sample/blob/master/rsa_sample.go
-  privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
- publicKey := &privateKey.PublicKey
-~~~   
-
-The publisher must publish its own node discovery message that includes this public key and an empty certificate field.
+Initially the publisher must create their own private and public keyset. The publisher must publish its own node discovery message that includes this public key and an empty signature field.
 
 **Administrator Marks The Publisher As Trusted**
 
-The **ZCAS** is the Zone Certificate Authority Service. Its sole purpose is to generate keys and certificate as needed to publishers.
+The **ZSAS** is the Zone Signature Authority Service. Its sole purpose is to generate and sign keys for publishers.
 
-The ZCAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional credentials can be required such as location, contact email, phone, administrator name and address. 
+The ZSAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional identitiy can be required such as location, contact email, phone, administrator name and address. 
 
-The method to establish trust can vary based on the situation. The following method is used in the ZCAS reference implementation. 
+The method to establish trust can vary based on the situation. The following method is used in the ZSAS reference implementation. 
 
 1. On installation of a new publisher, the administrator notes the publisher ID and the public key generated by that publisher. The publisher publishes its discovery using the temporary key.
 
-2. Next, the administrator logs in to the ZCAS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher and the public key match. If there is a match, the administrator informs the ZCAS that the publisher can be trusted. 
+2. Next, the administrator logs in to the ZSAS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher and the public key match. If there is a match, the administrator informs the ZSAS that the publisher can be trusted. 
 
-3. When a publisher status changes from untrusted to trusted, the ZCAS starts the cycle of key renewal as described below.
+3. When a publisher status changes from untrusted to trusted, the ZSAS starts the cycle of key renewal as described below.
    
 
-## Renewing Publisher Keys And Certificate - ZCAS
+## Renewing Publisher Keys And Signature - ZSAS
 
-A publisher can not request a new certificate. Instead, it is issued new keys and certificate by the ZCAS automatically when its certificate has less than half its life left. This is triggered when a publisher publishes its own node information using a valid signature.
+A publisher can not request a new set of keys. Instead, it is issued new keys and signature by the ZSAS automatically when its certificate has less than half its life left. This is triggered when a publisher publishes its own node information using a valid signature. Once a publisher uses the newly issued key and certificate, ZSAS removes the old key from its records. This key can no longer be used to obtain a new key and signature. It is therefore important that the publisher persists the new key and signature before publishing using the new keys. Note that the ZSAS does not store the private key it generated for the publisher. Once send to the publishers, only the public key is retained. The lifetime of a signed identity is relatively short. The default is 30 days. After half this time the identity is renewed by the ZSAS service. If no trusted public key is on record for the publisher, the publisher is marked as untrusted and the identity key is stored for review by administrator. 
 
-The ZCAS listens for publisher discovery messages on address  **\{zone}/\{publisher}/\{node}/\$publisher**
+The ZSAS listens for publisher discovery messages on address:
 
-The lifetime of a certificate is relatively short. The default is 30 days. After half this time the certificate is renewed by the ZCAS service.
+  **\{zone}/\{publisher}/\{node}/\$publisher**
 
-If no trusted public key is on record for the publisher, the publisher and key is stored for review by administrator.
+The new keys and signature is published on the publisher's zsas address. The publisher must subscribe to this address if it wishes to join the secure zone:
 
-Once a publisher uses the newly issued key and certificate, ZCAS removes the old key from its records. This key can no longer be used to obtain a new key and certificate. It is therefore important that the publisher persists the new key and certificate before publishing using the new keys.
+  **\{zone}/\{publisher}/\{node}/\$zsas**
 
-The new keys certificate and certificate is published on the publisher's zcas address. The publisher must subscribe to this address:
-
-  **\{zone}/\{publisher}/\{node}/\$zcas**
-
-The payload is encrypted using the last known publisher's public key. The publisher must decrypt it using its public key.
+The payload is encrypted using the last known publisher's public encryption key. The publisher must decrypt it using its encryption private key. A separate keyset is used for encryption messages to the publisher. The zsas includes the encryption keys, which are renewed at the same time as the signature keys. Since encryption uses a different algorithm than signing and the public key might not be interchangeable, a separate keyset is used to prevent any dependencies. 
 
 Message Structure:
 
-| Field        | type     | required     | Description |
-|--------------|--------- |------------  |------------ |
-| address      | string   | **required** | The address on which the message is published |
-| certificate  | string   | **required** | The new publisher certificate, signed by the ZCAS |
-| publicKey    | string   | **required** | The new publisher public key |
-| privateKey   | string   | **required** | The new publisher private key |
-| sender       | string   | **required** | Address of the sender {zone}/\$zcas/\$publisher (ZCAS) |
-| timestamp    | string   | **required** | Time the certificate was issued |
-| zoneKey      | string   | optional     | The zone shared secure for encrypting/decrypting zone wide messages|
+| Field            | type     | required     | Description |
+|:------------     |:-------- | :----------  |:----------- |
+| address          | string   | **required** | The address on which the message is published |
+| encPrivateKey    | string   | **required** | The publisher new private key for decrypting messages received by the publisher | 
+| identity         | Identity | **required** | The publisher identitiy information (see node publisher) |
+| identitySignature| string   | **required** | The signature of the identity, signed by the ZSAS
+| sender           | string   | **required** | Address of the sender, eg the zsas {zone}/\$zsas/\$publisher |
+| signature        | string   | **required** | The message signature, created by the zsas |
+| sigPrivateKey    | string   | **required** | The publisher new private key used to sign messages |
+| timestamp        | string   | **required** | Time the certificate was issued |
+| zoneKey          | string   | optional     | The zone shared secure for encrypting/decrypting zone wide messages|
+
 
 ~~~json
 {
   "message": {
     "address": "...",
-    "certificate": "...",
-    "publicKey": "...",
-    "privateKey": "...",
+    "encPrivateKey": "...",
+    "identity": {
+      "address": "zone/publisher/$publisher",
+      "encPublicKey": "...",
+      "expires": "2019-02-12T15:55:09.000Z",
+      "location": "Your City and Province/State",
+      "organization": "Your organization",
+      "sigPublicKey": "...",
+      "timestamp": "2019-01-12T14:55:09.000Z",
+      "url": "https://wwww.example.org",
+    },
+    "identitySignature": "...",
+    "signature": "...",
+    "sigPrivateKey": "...",
     "timestamp": "...",
     "zoneKey": "...",
   },
@@ -746,34 +763,30 @@ Message Structure:
 }
 ~~~   
 
-## Expiring Certificates
+## Expiring Identity Keys
 
-Depending on policy settings, the ZCAS can choose not to auto renew certificates after they have expired. This is more secure but it requires that the publisher is connected before the certificate expires. 
-
-Once a certificate is expired, the administrator has again go through the procecss of joining the publisher to the zone. 
-
+Depending on policy settings, the ZSAS can choose not to auto renew the identity keys after they have expired. This is more secure but it requires that the publisher is connected before the expiration date.  Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the zone. 
 
 ## Signing Messages
 
-After all that work to issue keys and a certificate, it is now time to use them to make sure that published message are indeed from the publisher they claim to be from.
+After all that work to issue identity and keys, it is now time to use them to make sure that published message are signed by the publisher. 
 
-A publisher **must** sign messages that it publishes. In cases where the signature cannot be verified the consumer has the option to ignore unverified sources.
+Unless stated otherwise, a publisher MUST sign messages that it publishes. In cases where the signature cannot be verified the consumer has the option to ignore unverified publishers.
 
 For example, an alarm company receives a security alert. The alert signature is verified to be from a registered client and not from a bad actor creating a distraction. The node location and alert timestamp are used to identify where and when the alert was given.
 
 ### Creating A Signature
 
-The method of signing uses [[RSA-PSS]](https://en.wikipedia.org/wiki/Probabilistic_signature_scheme)
-which is part of [[PKCS#1 v2.1](https://en.wikipedia.org/wiki/PKCS_1) and used in OpenSSL.
+The method of signing messages uses [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet). Its keys are shorter than RSA, it has not (yet - Feb 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
 
 Publishers sign their messages by:
-1. Create a hash of the message
-2. Encrypt the hash using the private key
+1. Create a hash of the message using SHA256
+2. Encrypt the hash using the private key using ECDSA
 
 See the example code:
-* golang: examples/example.go
-* python: examples/example.py
-* javascript: examples/example.js
+* golang: github: myzone.convention/examples/example.go
+* python: github: examples/example.py
+* javascript: github: examples/example.js
 
 
 ## Verifying A Message Signature
@@ -786,17 +799,17 @@ Consumers verify a signature by:
 4. Verify the signature using the hash and public key
 
 
-## Verifying Publisher Certificate
+## Verifying Publisher Identity
 
-When a consumer receives a publisher discovery message it needs to verify that the publisher is indeed who it claims to be, using its certificate issued by the ZCAS service.
+When a consumer receives a publisher discovery message it needs to verify that the publisher is indeed who it claims to be using the identity signed by the ZSAS service.
 
-Note that the use of a ZCAS service is optional. It is valid to manually install certificates on a publisher as long as they can be verified. The process below assumes the presence of a ZCAS.
+Note that the use of a ZSAS service is optional. It is valid to manually install identities on a publisher as long as they can be verified. The process below assumes the presence of a ZSAS.
 
-The ZCAS has the reserved publisher ID of '\$zcas' with a reserved node ID of '\$zcas'. It publishes its own certificate (just like any other publisher) with its node on address '{zone}/\$zcas/\$zcas'. In order to verify signatures the consumer must check if node certificates are issued by the ZCAS and signed by the ZCAS public key.
+The ZSAS has the reserved publisher ID of '\$zsas' with a reserved node ID of '\$zsas'. It publishes its own identity (just like any other publisher) with its node on address '{zone}/\$zsas/\$zsas'. In order to verify signatures the consumer has to use the node public key. When the node updates, its identity record must be signed by ZSAS, which is the same process using the ZSAS public key.
 
-A ZCAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.myzone.world'. zone has to be globally unique. 
+A ZSAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.myzone.world'. zone has to be globally unique. 
 
-In order to verify the ZCAS all consumers must obtain the TCA certificate.
+In order to verify the ZSAS all consumers must obtain the TCA certificate.
 
 See the example code:
 * golang: examples/example.go
@@ -805,7 +818,7 @@ See the example code:
 
 Todo: how to ensure global uniqueness? UUID?, hash?, registration
 
-The zone 'myzone' is reserved for local-only zones. In this case the ZCAS generates its own certificate and is considered the highest authority.
+The zone 'myzone' is reserved for local-only zones. In this case the ZSAS generates its own certificate and is considered the highest authority.
 
 ## Security Monitor - Zone Security Monitor (ZSM)
 
@@ -848,8 +861,8 @@ Bridge configuration variables can be set on address: {zone} / \$zbm / \{bridge}
 
 Bridges support the following configuration:
 
-| Field      | value type   | value        | Description
-|------------- |----------    |------------  |-----------
+| Field        | value type   | value        | Description
+|:------------ |:---------    |:-----------  |:----------
 | host         | string       | **required** | IP address or hostname of the remote bus
 | port         | integer      | optional     | port to connect to. Default is determined by protocol
 | protocol     | enum         | optional     | Protocol to use: "MQTT" (default), "REST"
@@ -879,10 +892,10 @@ The payload is a JSON document containing the message and signature:
 ~~~   
 Message structure:
 
-| Field      | type   | cabvalue     | Description |
-|------------- |----------|------------  |----------- |
-| address      | string   | **required** | The address on which the message is published |
-| forward      | string   | **required** | The node, input or output address to forward |
+| Field            | type     | required     | Description |
+|:------------     |:-------- |:------------ |:----------- |
+| address          | string   | **required** | The address on which the message is published |
+| forward          | string   | **required** | The node, input or output address to forward |
 | forwardDiscovery | boolean  | optional     | Forward the node/output \$discovery publication, default=true |
 | forwardBatch     | boolean  | optional     | Forward the output \$batch publication(s), default=true |
 | forwardEvent     | boolean  | optional     | Forward the output \$event publication(s), default=true |
@@ -907,8 +920,8 @@ The payload is a JSON document containing a message and signature field.
 
 Message structure:
 
-| Field      | type   | cabvalue       | Description |
-|------------- |----------|------------  |----------- |
+| Field        | type     | required     | Description |
+|:------------ |:-------- |:-----------  |:----------- |
 | address      | string   | **required** | The address on which the message is published |
 | remove       | string   | **required** | The node, input or output address to remove. |
 | sender       | string   | **required** | Address of the sender, eg: zone/publisher/node of the user that configures the bridge. |
@@ -920,7 +933,7 @@ Message structure:
 Nodes represent hardware or software services. The node types standardizes on the names of predefined devices or services.
 
 | Key              | Value Description |
-|--------------    |-------------      |
+|:-------------    |:------------      |
 | alarm            | Node is an alarm emitter |
 | adapter          | Software adapter, eg virtual device |
 | avcontrol        | Audio/video controller, eg remote control |
@@ -958,8 +971,8 @@ Nodes represent hardware or software services. The node types standardizes on th
 Node attributes provide a description of the device or service. These are read-only and usually hard coded into the device or service. 
 
 | Key              | Value Description |
-|--------------    |-------------      |
-| version          | Publishers include the version of the myzone convention. Eg v1.0 |
+|:-------------    |:------------      |
+| version          | Publishers include the version of the myzone standard. Eg v1.0 |
 | firmware         | Firmware identifier or version |
 | localip          | IP address of the node, for nodes that are publishers themselves |
 | location         | String with "latitude, longitude" of device location  |
@@ -974,7 +987,7 @@ Node attributes provide a description of the device or service. These are read-o
 Standard configuration names
 
 | Name          | Value Description |
-|-------------- |-------------      |
+|:------------- |:------------      |
 | ip4           | Device static IP-4 address
 | ip6           | Device static IP-6 address
 | location      | Device location name
@@ -986,8 +999,8 @@ Standard configuration names
 
 When available, units used in publication follow the SI standard 
 
-| input/output type| Units  | Value Datatype | description |
-|---------------  |---------|------------------|-------------|
+| input/output type| Units  | Value Datatype   | description |
+|:--------------  |:--------|:-----------------|:------------|
 | acceleration    | m/s2    | List of floats   | coordinates: x,y,z
 | action          |         | json      | perform an action; instance has the action name; message has parameters
 | airquality      |         | integer   | Number representing the air quality
