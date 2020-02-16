@@ -15,7 +15,7 @@ The standard is technology agnostic and can be implemented with programming lang
 
 A reference implementation in the golang language is provided for publishing zwave, onewire, and camera images, as well as a basic user interface with a dashboard and configuration editor.
 
-The standard can be found here:  [MYZONE STANDARD](./myzone-convention.md)
+The standard can be found here:  [MYZONE STANDARD](./myzone-standard.md)
 
 ## Installation
 
