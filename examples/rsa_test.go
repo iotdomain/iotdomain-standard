@@ -3,13 +3,10 @@ package examples
 /* Example code in GoLang for creating and verifying signatures using RSA-PSS
 * https://github.com/brainattica/Golang-RSA-sample/blob/master/rsa_sample.go
 
-  Performance of signing is very poor:
-  On Quad Core i5,4570S:
-   	Time to sign 100x: 2100ms
-		Time to verify 100x: 80ms
-
-	On Raspberry Pi 3:
-		tbd
+	 Performance (go 1.13)    1000x Sign      1000x Verify
+		RSA Intel i5, 4570S      2200 ms             89 ms
+		RSA Pi-2 (mild oc)      94000 ms           4800 ms
+		RSA Pi-3 (no oc)       135000 ms           6600 ms
 */
 
 import (

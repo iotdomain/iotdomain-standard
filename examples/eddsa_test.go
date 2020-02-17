@@ -2,15 +2,13 @@ package examples
 
 /* Example code in GoLang for creating and verifying signatures using EdDSA (Ed25519)
 
-	https://pkg.go.dev/github.com/katzenpost/core/crypto/eddsa?tab=doc, and
-	https://pkg.go.dev/golang.org/x/crypto/ed25519?tab=doc
+https://pkg.go.dev/github.com/katzenpost/core/crypto/eddsa?tab=doc, and
+https://pkg.go.dev/golang.org/x/crypto/ed25519?tab=doc
 
-  Performance of signing on Quad Core i5,4570S:
-   	Time to sign 1000x: 60ms
-		Time to verify 1000x: 160ms
-
-	On Raspberry Pi 3:
-		tbd
+ Performance (go 1.13)              1000x Sign      1000x Verify
+	Intel i5, 4570S (5800 BogoMIPS)     62 ms             0.16 ms
+	Pi-2  (mild oc)                   2000 ms          6300 ms
+	Pi-3  (38 BogoMips)               2800 ms          8800 ms
 */
 
 import (

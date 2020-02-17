@@ -92,7 +92,7 @@ A reference implementation of a publisher is provided for the golang and python 
 
 # System Overview
 
-[System Overview](./system-overview.png)
+![System Overview](./system-overview.png)
 
 
 ## Zone

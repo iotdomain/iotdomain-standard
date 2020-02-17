@@ -3,12 +3,11 @@ package examples
 /* Example code in GoLang for creating and verifying signatures using ECDSA
    See also https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet/
 
-  Performance of signing is good on Quad Core i5,4570S:
-   	Time to sign 1000x: 38ms
-		Time to verify 1000x: 3ms
-
-	On Raspberry Pi 3:
-		tbd
+	 Performance  (go 1.13)     sysbench      1000x Sign      1000x Verify
+		Intel i5, 4570S             99971         39 ms             3 ms
+		Pi-2 (no oc)                  222       6200 ms            41 ms
+		Pi-2 (mild oc)                222				5400 ms            37 ms
+		Pi-3B+ (no oc)      				  288 			7100 ms            45 ms
 */
 
 import (
