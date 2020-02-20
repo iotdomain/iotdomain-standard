@@ -2,6 +2,7 @@ The MyZone Standard
 ===================
 
 This standard defines the rules and formats of exchanging information between publishers and consumers of IoT and other services.
+[[TOC]]
 
 # Introduction
 
@@ -219,19 +220,13 @@ For message bus systems that do not support the '/' character as address separat
 
 When an output is directly controlled by an input, the iotype and instance are the same. To control the input a message is sent to the node with the $set command followed by the iotype and instance. The node processes the command and if accepted updates the output by publishing the result with the $value and $latest commands.
 
-### Aliases
+### Node Aliases
 
 When devices are replaced then the node identifier of the replacement can differ from the original. ZWave for example generates a new node ID each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID instead, which can be quite a bit of effort. 
 
-To address this, nodes can be configured with an 'alias'. When a node alias is set, all input and output publications use the alias address format for the message bus address. The address inside the input and output messages remain unchanged.
+To address this, nodes can be configured with an 'alias' ID. When a node alias is set, all input and output publications use the alias instead of the node ID in the address for the message bus. The address inside the input and output messages remain unchanged.
 
-The alias address format uses the keyword \$alias as the publisher and the alias itself as the node id.
-
-* Input discovery address: \{zone}/\$alias\/\{aliasName}/\$input/\{type}/\{instance}
-* Output discovery address: \{zone}/\$alias\/\{aliasName}/\$output/\{type}/\{instance}
-* Output value address: \{zone}/\$alias\/\{aliasName}/\$value/\{type}/\{instance}
-
-  
+The node alias can be set through its configure command. Support for node aliases is optional and implemented in the publisher. If the publisher configuration does not have an 'alias' configuration option then it is not supported.
 
 ## Subscribers
 
