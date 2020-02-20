@@ -153,13 +153,13 @@ The objective of this standard is to support interoperability, not low bandwidth
 
 ## Nodes
 
-A zone is populated by nodes that produce or consume information. Nodes have inputs and/or outputs through which information passes. 
+A zone is populated by nodes that produce or consume information. A node can be a hardware device, a service, or a combination of both.
 
 Nodes can but do not have to be compatible with this standard. For nodes that are not compatible, so-called 'adapter node' provides interoperability between the node native protocol and this standard. 
 
 Nodes that publish information according to this standard are called **publishers**. They publish their own output information or publish information from incompatible nodes.
 
-A node can have inputs and/or outputs through which information passes. A node can have many as inputs and outputs that are connected to the node. Inputs and outputs are part of their node and cannot exist without it. 
+A node has inputs and/or outputs through which information passes. A node can have many as inputs and outputs that are connected to the node. Inputs and outputs are part of their node and cannot exist without it. 
 
 ## Publishers
 
@@ -216,6 +216,22 @@ For message bus systems that do not support the '/' character as address separat
 | \$value      | Publication of an output sensor value without metadata. Must be followed by an output type and instance |
 | \$keys       | Set the keys and signature of a publisher (encrypted) |
 
+
+When an output is directly controlled by an input, the iotype and instance are the same. To control the input a message is sent to the node with the $set command followed by the iotype and instance. The node processes the command and if accepted updates the output by publishing the result with the $value and $latest commands.
+
+### Aliases
+
+When devices are replaced then the node identifier of the replacement can differ from the original. ZWave for example generates a new node ID each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID instead, which can be quite a bit of effort. 
+
+To address this, nodes can be configured with an 'alias'. When a node alias is set, all input and output publications use the alias address format for the message bus address. The address inside the input and output messages remain unchanged.
+
+The alias address format uses the keyword \$alias as the publisher and the alias itself as the node id.
+
+* Input discovery address: \{zone}/\$alias\/\{aliasName}/\$input/\{type}/\{instance}
+* Output discovery address: \{zone}/\$alias\/\{aliasName}/\$output/\{type}/\{instance}
+* Output value address: \{zone}/\$alias\/\{aliasName}/\$value/\{type}/\{instance}
+
+  
 
 ## Subscribers
 
