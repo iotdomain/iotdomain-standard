@@ -1,7 +1,7 @@
-The MyZone Standard
-===================
+The IotConnect Standard
+=======================
 
-This standard defines the rules and formats of exchanging information between publishers and consumers of IoT and other services.
+The IotConnect standard defines the rules and formats of exchanging information between IoT publishers and consumers.
 [[TOC]]
 
 # Introduction
@@ -82,11 +82,11 @@ Future minor version upgrades of this standard must remain backwards compatible.
 
 A major version upgrade of this standard is not required to be backwards compatible but **MUST** be able to co-exists on the same bus. Implementations must ignore messages with a higher major version.
 
-Publishers include their version of the MyZone standard when publishing their node. See 'discovery' for more information.
+Publishers include their version of the standard when publishing their node. See 'discovery' for more information.
 
 # Technology Agnostic
 
-MyZone is technology agnostic. It is a standard that describes the information format and exchange for discovery, configuration, inputs and outputs, irrespective of the technology used to implement it. Use of different technologies will actually serve to further improve interoperability with other information sources.
+This standard is technology agnostic. It is a standard that describes the information format and exchange for discovery, configuration, inputs and outputs, irrespective of the technology used to implement it. Use of different technologies will actually serve to further improve interoperability with other information sources.
 
 A reference implementation of a publisher is provided for the golang and python languages using the MQTT service bus.
 
@@ -128,9 +128,9 @@ If in future a better protocol becomes the defacto standard, the MQTT protocol w
 
 ### Guaranteed Delivery (or lack thereof)
 
-The use of a simple message bus like MQTT brings with it certain limitations, the main one being the lack of guaranteed delivery. The role of the MQTT message bus is to deliver a message to subscribers **that are connected**. While this simplifies the implementation, it pushes the problem of guaranteed delivery to the application. It is effectively a lossy transport between publishers and subscribers.
+The use of a simple message bus, like MQTT, brings with it certain limitations, the main one being the lack of guaranteed delivery. The role of the message bus is to deliver a message to subscribers **that are connected**. While this simplifies the implementation, it pushes the problem of guaranteed delivery to the application. It is effectively a lossy transport between publishers and subscribers.
 
-MyZone mitigates this to some extend by supporting a 'history' output that contains recent values. It is possible to catch up to missed messages by checking the history after a reconnect. The penalty is higher bandwidth, and this is only useful in cases of low message rate or high bandwidth capabilities.
+The standard mitigates this to some extend by supporting a 'history' output that contains recent values. It is possible to catch up to missed messages by checking the history after a reconnect. The penalty is higher bandwidth, and this is only useful in cases of low message rate or high bandwidth capabilities.
 
 Secondly, MQTT supports 'retainment' messages where the last value of a publication is retained. When a consumer connects, it receives the most recent message for all addresses it subscribes to, bringing it instantly up to date (with potentially gaps). Note that not all MQTT implementations support retainment. 
 
@@ -138,9 +138,9 @@ This usage of the message bus will do fine in cases where the goal is to get an 
 
 In cases of critical messages such as emergency alerts, some kind of handshake or failover mechanism is strongly adviced. In these cases the transport is merely a step in a longer chain. What matters is that the message is guaranteed to be processed. This requires application level support.
 
-MyZone can support handshake over the message bus at the application level. A service that sends out a critical output message will repeat it until it has received an acknowledgement on its input that it has been processed.
+Information exchange handshake over the message bus must be applied at the application level. A service that sends out a critical output message will repeat it until it has received an acknowledgement on its input that it has been processed.
 
-Based on these considerations the use of MQTT as the message bus should be sufficient for most use-cases. 
+Based on these considerations the use of simple message bus, like MQTT, should be sufficient for most use-cases. 
 
 ### Severely Constrained Clients
 
@@ -283,7 +283,7 @@ Node discovery message structure:
 | config       | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the configuration options. These can be modified with a ‘$configure’ message.|
 | sender       | string    | **required** | Address of the publisher node of the message (zone/publisher/\$publisher/\$node) |
 | timestamp    | string    | **required** | Time the record is created |
-| identity           | Identity  | publishers   | Publisher identity used to identify the publisher in secure zones. Includes public keys for verifying and encryption. Only included with publishers |
+| identity     | Identity  | publishers   | Publisher identity used to identify the publisher in secure zones. Includes public keys for verifying and encryption. Only included with publishers |
 | identitySignature  | string    | optional     | Signature of the identity signed by the ZSAS. Empty for publishers that have not joined the secure zone.
 
 **Configuration Record**
@@ -463,7 +463,7 @@ The message structure is as follows:
 |:-------------|:----------|:------------ |:----------- |
 | address      | string    | **required** | The address on which the message is published |
 | sender       | string    | **required** | Address of the publisher node of the message |
-| timestamp    | string    | **required** | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
+| timestamp    | string    | **required** | timestamp of the value ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
 | unit         | string    | optional     | unit of value type, if applicable |
 | value        | string    | **required** | value in string format |
 
@@ -502,7 +502,7 @@ The message structure:
 || timestamp   | string    | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
 || value       | string    | Value in string format using the node's unit |
 | sender       | string    | **required** | Address of the publisher node of the message |
-| timestamp    | string    | **required** | timestamp of the value |
+| timestamp    | string    | **required** | timestamp of the message |
 | unit         | string    | optional     | unit of value type |
 
 For example:
@@ -578,9 +578,10 @@ The message structure:
 | sender       | string    | **required** | Address of the publisher node of the message |
 | timestamp    | string    | **required** | ISO8601 timestamp this message was created |
 
-# \$set: Updating Inputs
+# Updating Inputs
 
-Publishers subscribe to receive updates to the inputs of the node they manage.
+## \$set: Control Input Value
+Publishers subscribe to receive commands to update the inputs of the node they manage.
 
 Address:  **\{zone}/\{publisher}/\{node}/\$set/\{type}/\{instance}**
 
@@ -798,7 +799,7 @@ Publishers sign their messages by:
 3. base64 encode the signature for transportation
 
 See the example code:
-* golang: github: myzone.convention/examples/example.go
+* golang: github: iotconnect.standard/examples/example.go
 * python: github: examples/example.py
 * javascript: github: examples/example.js
 
@@ -821,7 +822,7 @@ Note that the use of a ZSAS service is optional. It is valid to manually install
 
 The ZSAS has the reserved publisher ID of '\$zsas' with a reserved node ID of '\$zsas'. It publishes its own identity (just like any other publisher) with its node on address '{zone}/\$zsas/\$zsas'. In order to verify signatures the consumer has to use the node public key. When the node updates, its identity record must be signed by ZSAS, which is the same process using the ZSAS public key.
 
-A ZSAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.myzone.world'. zone has to be globally unique. 
+A ZSAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.iotconnect.zone', where zone has to be globally unique. 
 
 In order to verify the ZSAS all consumers must obtain the TCA certificate.
 
@@ -832,7 +833,7 @@ See the example code:
 
 Todo: how to ensure global uniqueness? UUID?, hash?, registration
 
-The zone 'myzone' is reserved for local-only zones. In this case the ZSAS generates its own certificate and is considered the highest authority.
+The zone '$local' is reserved for local-only zones. In this case the ZSAS generates its own certificate and is considered the highest authority.
 
 ## Security Monitor - Zone Security Monitor (ZSM)
 
@@ -986,7 +987,7 @@ Node attributes provide a description of the device or service. These are read-o
 
 | Key              | Value Description |
 |:-------------    |:------------      |
-| version          | Publishers include the version of the myzone standard. Eg v1.0 |
+| version          | Publishers include the version of the standard. Eg v1.0 |
 | firmware         | Firmware identifier or version |
 | localip          | IP address of the node, for nodes that are publishers themselves |
 | location         | String with "latitude, longitude" of device location  |

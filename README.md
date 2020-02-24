@@ -1,4 +1,4 @@
-<i src="myzone.png"/>
+<i src="iotconnect.png"/>
 
 **Status:**
 
@@ -7,7 +7,7 @@
 *The working reference implementation that is based on an earlier version of this standard is currently (Jan 2020) being updated. As publishers are converted they will be added to the reference implemention for this version. This includes publishers for openzwave, onewire, isy99, ipnetwork, webcam, wallpaper and a dashboard*. 
 
 
-# The MyZone Standard
+# The IotConnect Standard
 
 This is a standard for discovery and exchange of information from IoT devices, services and other sources. The goal is to provide interoperability between a wide range of IoT devices and other information sources to build a true information network.
 
@@ -15,7 +15,7 @@ The standard is technology agnostic and can be implemented with programming lang
 
 A reference implementation in the golang language is provided for publishing zwave, onewire, and camera images, as well as a basic user interface with a dashboard and configuration editor.
 
-The standard can be found here:  [MYZONE STANDARD](./myzone-standard.md)
+The standard can be found here:  [STANDARD](./iotconnect-standard.md)
 
 ## Installation
 
@@ -23,13 +23,13 @@ The reference implementation consists of stand-alone 'publishers', written in go
 
 Publishers can be built from source. Each will be a standalone binary that can operate independently. Binary versions are available for raspberry pi and for linux x64 based systems. Publishers can be launched simply by running it, or through the included systemd launcher for autostart. Publishers can run as any user but some publishers like the 'ipnet' network scanner requires elevated priviliges. See instructions of the publishers for details.
 
-The only configuration neccesary is to edit the file myzone.conf and configure the mqtt bus connection information. This file is first read from /etc/myzone/myzone.conf and if not found, in a local subdirectory 'config'. It is read by all publishers.
+The only configuration neccesary is to edit the file iotconnect.conf and configure the mqtt bus connection information. This file is first read from /etc/iotconnect/iotconnect.conf and if not found, in a local subdirectory 'config'. It is read by all publishers.
 
 Minimal manual installation on Raspberry pi:
-* $ git clone ... myzone            -> todo, update location of binaries
-* $ edit myzone/config/myzone.conf  -> check the mqtt bus and storage settings
-* $ sudo cp -a myzone /opt/
-* $ /opt/myzone/runall.sh
+* $ git clone ... iotconnect            -> todo, update location of binaries
+* $ edit iotconnect/config/iotconnect.conf  -> check the mqtt bus and storage settings
+* $ sudo cp -a iotconnect /opt/
+* $ /opt/iotconnect/runall.sh
 
 
 ## Usage
