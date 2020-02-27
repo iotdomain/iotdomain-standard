@@ -1,7 +1,9 @@
 The IotConnect Standard
 =======================
 
-The IotConnect standard defines the rules and formats of exchanging information between IoT publishers and consumers.
+The IotConnect standard defines how information is exchanged between IoT publishers and consumers.
+
+
 [[TOC]]
 
 # Introduction
@@ -10,7 +12,7 @@ As connected devices become more and more prevalent, so have the problems surrou
 
 ## Interoperability
    
-The use of information produced by these devices is becoming more and more difficult because of the plethoria of different protocol and data formats these devices use. This is apparent for home automation solutions such as OpenHAB and Home Assistant that each implement hundreds of bindings to talk to different devices and services. Each solution has to reimplement these bindings. This implementation then has to be adjusted to different platforms, eg Linux, Windows and MacOS, which adds even more work.
+The use of information produced by various devices is challenging because of the plethoria of different protocol and data formats in use. This is apparent in home automation solutions such as OpenHAB and Home Assistant that each implement hundreds of bindings to talk to different devices and services. Each solution has to reimplement these bindings. This implementation then has to be adjusted to different platforms, eg Linux, Windows and MacOS, which adds even more work.
 
 Without a common standard it is unavoidable that manufacturers of IoT devices choose their own protocols. It is in everyone's interest to provide a standard that enables an open information interchange so that bindings only have to be implemented once. 
 
@@ -24,12 +26,12 @@ Application developers often implement solutions specific to their application a
 
 This standard defines the process and messaging for discovery of devices and services without the need for a central resource directory. 
 
-Note. The IETF draft "CoRE Resource Directory (draft-ietf-core-resource-directory-20) takes the approach where a centralized service provides a directory of resources. While this is perfectly valid in an environment where devices can reach the directory. However, this falls outside the scope of this standard since this standard only permits communication between producers and consumers over the message bus. 
+Note. The IETF draft "CoRE Resource Directory (draft-ietf-core-resource-directory-20) takes the approach where a centralized service provides a directory of resources. This approach works fine but does not fit within the concept of this standard for several reasons: Mainly it requires and additional direct connection between client and directory which adds an additional protocol with its own encoding. This standard is based on only requiring connections between client and message broker, keeping the attack footprint to a minimum. The protocol is JSON based for all messages. Second, it does not support sharing of information between zones. Last, it does not support the concept of last will and testament when a publisher unexpectedly disconnects from the network. Like most things it is possible to make it work but it is not the best fitting solution.
 
 
 ## Configuration
 
-Configuration of IoT devices is often done through a web portal of some sort. These web portals are not always as secure as they should be. They often require a login name and password and lack 2 factor authentication. Passwords are easily reused. Backdoors are sometimes left active. Overall security is lacking.
+Configuration of IoT devices is often done through a web portal of some sort from the device itself or a gateway. These web portals are not always as secure as they should be. They often require a login name and password and lack 2 factor authentication. Passwords are easily reused. Backdoors are sometimes left active. Overall security is lacking.
    
 Configuration is not always suited for centralized management by application services. For example, to configure all temperature sensors to report in Celcius the user has to login to the device management portal(s), find the sensor and find the configuration for this. This is difficult to automate.
 
@@ -284,7 +286,7 @@ Node discovery message structure:
 | sender       | string    | **required** | Address of the publisher node of the message (zone/publisher/\$publisher/\$node) |
 | timestamp    | string    | **required** | Time the record is created |
 | identity     | Identity  | publishers   | Publisher identity used to identify the publisher in secure zones. Includes public keys for verifying and encryption. Only included with publishers |
-| identitySignature  | string    | optional     | Signature of the identity signed by the ZSAS. Empty for publishers that have not joined the secure zone.
+| identitySignature  | string    | optional     | Base64 encoded signature of the identity signed by the ZSAS. Empty for publishers that have not joined the secure zone.
 
 **Configuration Record**
 
@@ -311,8 +313,8 @@ The identity record is included with nodes that are publishers and is intended t
 | expires         | string   | **required** | ISO8601 Date this identity expires |
 | location        | string   | optional     | Location of the publisher, city, province/state, country |
 | organization    | string   | optional     | Organization the publisher belongs to |
-| publicKeyCrypto | string   | **required** | The public key for encrypting messages to the publisher | 
-| publicKeySigning| string   | **required** | The public key for verifying publisher signatures |
+| publicKeyCrypto | string   | **required** | Base64 encoded public key for encrypting messages to the publisher | 
+| publicKeySigning| string   | **required** | Base64 encoded public key for verifying publisher signatures |
 | publisher       | string   | **required** | The publisher node ID |
 | timestamp       | string   | **required** | Time the identity was re-signed |
 | url             | string   | optional     | URL of the publisher information page |
@@ -431,7 +433,7 @@ Address format:  **\{zone}/\{publisher}/\{node}/\{command}/\[\{type}/\{instance}
 }
 ~~~
 
-The signature is created by creating the hash of the message content and encrypting it using the private key of the publisher of the message. See more in the 'signing' section.
+The signature is created by creating the hash of the message content and encrypting it using the private key of the publisher of the message and encode the result in a base64 string. See more in the 'signing' section.
 
 
 ## \$value: Publish Single 'no frills' Output Value
@@ -466,8 +468,6 @@ The message structure is as follows:
 | timestamp    | string    | **required** | timestamp of the value ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
 | unit         | string    | optional     | unit of value type, if applicable |
 | value        | string    | **required** | value in string format |
-
-The signature is created by encrypting a hash of the message content using its private key. See more in the 'signing' section.
 
 Example of a publication on zone-1/openzwave/6/\$latest/temperature/0:
 
@@ -615,7 +615,7 @@ Support for remote configuration lets administrators manage the devices and serv
 
 Publishers of discovery information provide the existing node and/or input and output configuration, and can also accept commands to update this configuration.
 
-Changing configuration and controlling inputs can be limited to specific users as identified by the signature contained in the configuration and input control messages.
+Changing configuration and controlling inputs can be limited to specific senders.
 
 
 Address:  **\{zone}/{publisher}/{node}/\$configure**
