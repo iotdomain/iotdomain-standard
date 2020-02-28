@@ -23,13 +23,13 @@ IotConnect is a simple standard for M2M (machine to machine) discovery and excha
 5. This standard does not limit itself to devices. Information *enrichment* services, such as automation, analysis and AI services that support the standard, can be added to the bus and use the information that is published. In turn they can publish their own information to be shown or used by other services. These services no longer need to figure out how to connect to information sources and can readily use the information published on the message bus. It greatly simplifies the flow of information.
 6. Information sharing is built into the standard using zoning. The owner of a zone can share select information with users in another zone without concerns of security as the zones remains locked off to anything else. IoT devices don't need to know anything about how to share their information. See the use-cases for examples of how useful this can be.
 
-The use of a message bus is key to this standard to ensure security without the headaches. All communication takes place over the message bus. Secure and hardened message bus implementations are readily available for different environments, like the lightweight [mosquitto](https://mosquitto.org/)' that easily run on a raspberry pi, enterprise level implementations such as [HiveMQ](https://www.hivemq.com/), and massive cloud based implementations like [Amazon IoT](https://aws.amazon.com/iot/) and [Google IoT](https://cloud.google.com/iot-core).
+The use of a message bus is key to this standard to ensure security without the headaches. All communication takes place over the message bus. Secure and hardened message bus implementations are readily available for different environments, like the lightweight [mosquitto](https://mosquitto.org/)' that easily run on a raspberry pi, enterprise level implementaticabin2ons such as [HiveMQ](https://www.hivemq.com/), and massive cloud based implementations like [Amazon IoT](https://aws.amazon.com/iot/) and [Google IoT](https://cloud.google.com/iot-core).
 
 The standard is technology agnostic and can be implemented with any programming language and message bus of choice. MQTT and HTTP based protocols are the most common formats for transporting the information.
 
 A reference implementation of library supporting the standard for MQTT based message bus is available along with several adapters that use it to publish information from zwave, onewire, cameras and other. A dashboard with configuration editor provides an example on how to use the published information.
 
-The standard can be found here:  [IoT Connect Standard](./iotconnect-standard.md)
+The standard can be found here:  [IoTConnect Standard](./iotconnect-standard.md)
 
 The golang reference implementation: [IotZone-golang](https://github.com/hspaay/iotzone.golang)
 
@@ -45,56 +45,56 @@ In case of extremely constrained devices such as embedded micro controllers wher
 
 ## Introduction
 
-There are many protocols defined for communication between devices and destination. Rather than rehash what others have written, this section describes how IoTConnect uses or differs with the more common protocols.
-
-The following article on IoT protocols provides a good overview of internet related protocols broken down in categories that each solve a specific problem. 
-
-* https://www.postscapes.com/internet-of-things-protocols/
-
+There are many protocols related to communication between devices and their consumers. Rather than rehash what others have written, this section describes how IoTConnect uses or differs with the more commonly known protocols.
+For ease of understanding the types of protocols are broken down based on their purpose. This is not the same breakdown as the layers of the OSI model, but focuses on their purpose in the IoT application space.
 
 ## Transport Protocols
 
-Transport protocols are about transporting low level packets between two points. Commonly known transports are Wifi and Bluetooth.
+Transport protocols are about transporting low level packets between two points. A well known transport is TCP/IP and UDP. They make use of a physical transport such as Ethernet, wifi, bluetooth, LoraWAN, and so on.
 
-IoTConnect is agnostic and unaware of the transport protocol used.
-
-## Infrastructure Protocols
-
-Infrastructure protocols use a transport protocol to deliver low level messages. The most commonly known are TCP/IP and UDP.
-
-IoTConnect allows the use of any infrastructure protocol to obtain information from devices. To publish information it uses the protocol required by the message bus, usually TCP/IP. 
+IoTConnect is agnostic of the transport protocol used. Instead it depends on higher level messaging protocols.
 
 ## Discovery Protocols
 
-Discovery protocols such as mDNS, BLE beacon, Hypercat, UPnP aim to discover devices on the same network or in the vicinity. One of the more interesting options is COAP's resource discovery as described in [RFC7252#section-7](https://tools.ietf.org/html/rfc7252#section-7). It is not directly compatible with IoTConnect as it utilizes a HTTP/REST based request/response model with resources expressed as URLs, whereas IoTConnect is independent from HTTP. 
+Discovery protocols such as mDNS, BLE beacon, Hypercat, UPnP, AD aim to discover devices on the same network or in the vicinity. One of the more interesting options is COAP's resource discovery as described in [RFC7252#section-7](https://tools.ietf.org/html/rfc7252#section-7) that provides discovery of constrained devices like those in IoT. 
 
 IoTConnect implements discovery by using the publish subscribe mechanism of a message bus. It differs with the mentioned protocols in that:
 
-A) IoTConnect is more secure as it does not require incoming network access and open ports.
+A) IoTConnect does not depend on the network topology and is independent of the network infrastructure used to connect devices to the message bus. Many older discovery protocols rely on multicast DNS and a specific network topology and are therefore not compatible. COAP is one of the few exceptions and facilitates discovery of remote devices. In this sense it is similar to IoTConnect.
 
-B) IoTConnect does not depend on the network topology and is independent of the network infrastructure used to connect devices to the message bus. Many discovery protocols rely on multicast DNS and a specific network topology and are therefore not compatible.
+B) IoTConnect devices (nodes) remain hidden on the network which improves their security. Most other protocols require the device to be accessible and connectable. COAP uses HTTP based URL schema to identify the device endpoint. This requires both the directory service and the device to be accessible via the internet, whereas IoTConnect only exposes the message bus. In Addition IoTConnect can use but does not require HTTP/REST and does not utilize a request/response mechanism.
 
-C) IoTConnect uses 'zoning' which gives the user control over what devices have access to a zone, regardless the network topology used.
+C) IoTConnect uses 'zoning' which gives the user control over what devices have access to a zone, regardless the network topology used. COAP supports groups which could achieve the same goal for discovery.
 
 
-## Data/Message Protocols
+## Message Protocols
 
-Data/Messaging protocols aim to deliver informational messages using a transport protocol. 
+Messaging protocols aim to deliver messages to one or multiple consumers using a transport protocol without understanding their content. 
 
 * [MQTT](https://en.wikipedia.org/wiki/MQTT) MQ Telemetry Transport, ISO standard for light weight publish/subscribe messaging between devices. Usually runs over TCP/IP but it can use other lossless bi-directional network. Intended for use in small footprint and resource constrainted devices.
 
 * [AMQP](https://en.wikipedia.org/wiki/Advanced_Message_Queuing_Protocol). Open standard for message oriented middleware for point to point and publish/subscribe connectivity. Supports secure and reliable communicate using TCP.
 
-
 * [DDS](https://en.wikipedia.org/wiki/Data_Distribution_Service). networking middleware to enable data dependable, high performance real-time information exchange. Like MQTT it supports publish/subscribe but also includes discovery of publishers and subscribers and exclusive ownership of topics (addresses). [DDS-XRCE](https://objectcomputing.com/resources/publications/sett/october-2019-dds-for-extremely-resource-constrained-environments) is aimed at resource constrained devices. A [Micro XRCE-DDS client](https://github.com/eProsima/Micro-XRCE-DDS-Client) is available for C++ clients.
   
-IoTConnect requires the use of a message bus with publish/subscribe capability per zone. Information is shared with subscribers in a zone and each zone can have its own message bus. MQTT, AMQP and DDS are all able to work as a message bus for IoTConnect. MQTT is considered the default as it is lightweight and clients are readily available. That said, DDS looks very interesting as an alternative and could offer reliability and security benefits.
+IoTConnect requires the use of a message bus with publish/subscribe capability per zone. Information is shared with one or more subscribers in a zone and each zone can have its own message bus. MQTT, AMQP and DDS are all able to work as a message bus for IoTConnect. MQTT is considered the default as it is lightweight and clients are readily available. That said, DDS looks very interesting as an alternative and could offer reliability and security benefits.
+
+The reliance on a message bus protocol has several pros and cons. IoTConnect values security above all and works well in situations where the downsides are acceptable.
+1. Upside: security. Devices remain hidden from the internet. This avoids many security risks.
+2. Upside: ease of device configuration. The device only needs to be configured to connect to the message bus and remains unaware of who the consumers are. Changes to the consumers do not affect the device.
+3. Downside: on lightweight message busses consumers that are disconnected do not receive their messages. The device publisher is unaware and will not resend. This is not the problem of the device but of the message bus. Some enterprise message busses, like MS Azure Message Bus, support queuing of messages until delivered but can be difficult to configure. IoTConnect addresses this problem by supporting a history message that contains the recently published values at the cost of extra bandwidth to the consumer. More importantly, guaranteed delivery is overrated as it doesn't guarantee guaranteed processing.
+   
+For delivery of critical messages an application level handshake is recommended. Even if the message is guaranteed to be delivered, there is no guarantee it is also processed. To address this, the receiver can publish a confirmation on the publishers input once the message is successfully processed. If the confirmation is not received the message is re-published. For example, a security alarm sensor repeats its alarm notification until the alarm service responds with a message that help is on the way. 
 
 ## Device Management Protocols
 
-Device management protocols aim to facilitate asset management.
+Device management protocols aim to facilitate asset management. COAP and other protocols support a central directory service that can be used for asset management.
 
-IoTConnect does not provide a centralized asset directory. Asset management can be build using IoTConnect through its discovery and configuration messaging.
+Centralized Asset Management is not included in IoTConnect. However, device management is available using 'retained' capability on message busses that support it as discovery messages are published with the retained flag set.
+IoTConnect discovery messages include asset information like device make/model. Subscribers to discovery messages will receive all available publishers and nodes when connecting to the message bus. In many cases that makes a directory service unnecesary. Not all message busses support retained capability however. Mosquitto is a simple lightweight message bus that does support retained messages.
+
+A central directory service can easily be added by storing discovery messages and making them available on request.
+
 
 ## Semantic Standards
 
