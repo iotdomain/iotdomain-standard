@@ -226,7 +226,7 @@ When an output is directly controlled by an input, the iotype and instance are t
 
 When devices are replaced then the node identifier of the replacement can differ from the original. ZWave for example generates a new node ID each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID instead, which can be quite a bit of effort. 
 
-To address this, nodes can be configured with an 'alias' ID. When a node alias is set, all input and output publications use the alias instead of the node ID in the address for the message bus. The address inside the input and output messages remain unchanged.
+To address this, nodes can be configured with an 'alias' ID. When a node alias is set, all input and output publication addresses use the alias instead of the node ID. The address inside the input and output messages remains the actual node ID so this only affects the address on which inputs and outputs discovery and values are published and subscribed.
 
 The node alias can be set through its configure command. Support for node aliases is optional and implemented in the publisher. If the publisher configuration does not have an 'alias' configuration option then it is not supported.
 

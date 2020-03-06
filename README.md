@@ -43,16 +43,21 @@ In case of extremely constrained devices such as embedded micro controllers wher
 
 # IoT Related Protocols 
 
+So how does this standard relate to other IoT protocols out there? Lets start with an overview:
+
+* https://www.postscapes.com/internet-of-things-protocols/
+
+* https://www.ubuntupit.com/top-15-standard-iot-protocols-that-you-must-know-about/
+
 ## Introduction
 
-There are many protocols related to communication between devices and their consumers. Rather than rehash what others have written, this section describes how IoTConnect uses or differs with the more commonly known protocols.
-For ease of understanding the types of protocols are broken down based on their purpose. This is not the same breakdown as the layers of the OSI model, but focuses on their purpose in the IoT application space.
+As seen above, there are many protocols related to IoT. Rather than rehash what others have written, this section describes how IoTConnect uses or differs with the more commonly known protocols based on the categories they are in. This is not the same breakdown as the layers of the OSI model but focuses on their purpose in the IoT application space.
 
 ## Transport Protocols
 
-Transport protocols are about transporting low level packets between two points. A well known transport is TCP/IP and UDP. They make use of a physical transport such as Ethernet, wifi, bluetooth, LoraWAN, and so on.
+Transport protocols are about transporting low level packets between two points. A well known transport is TCP/IP and UDP. They make use of a physical transport such as Ethernet, wifi, bluetooth, LoraWAN, RFID, NFC, and so on.
 
-IoTConnect is agnostic of the transport protocol used. Instead it depends on higher level messaging protocols.
+IoTConnect is agnostic of the transport protocol used. Instead it depends on higher level messaging protocols and device gateways that use transport protocols. Simply put, use it when available. It is all good.
 
 ## Discovery Protocols
 
@@ -77,12 +82,12 @@ Messaging protocols aim to deliver messages to one or multiple consumers using a
 
 * [DDS](https://en.wikipedia.org/wiki/Data_Distribution_Service). networking middleware to enable data dependable, high performance real-time information exchange. Like MQTT it supports publish/subscribe but also includes discovery of publishers and subscribers and exclusive ownership of topics (addresses). [DDS-XRCE](https://objectcomputing.com/resources/publications/sett/october-2019-dds-for-extremely-resource-constrained-environments) is aimed at resource constrained devices. A [Micro XRCE-DDS client](https://github.com/eProsima/Micro-XRCE-DDS-Client) is available for C++ clients.
   
-IoTConnect requires the use of a message bus with publish/subscribe capability per zone. Information is shared with one or more subscribers in a zone and each zone can have its own message bus. MQTT, AMQP and DDS are all able to work as a message bus for IoTConnect. MQTT is considered the default as it is lightweight and clients are readily available. That said, DDS looks very interesting as an alternative and could offer reliability and security benefits.
+IoTConnect requires the use of a message bus with publish/subscribe capability. Information is shared with one or more subscribers in a zone and each zone can have its own message bus. MQTT, AMQP and DDS are all able to work as a message bus for IoTConnect. MQTT is considered the default as it is lightweight and clients are readily available. That said, DDS looks very interesting as an alternative and could offer reliability and security benefits.
 
 The reliance on a message bus protocol has several pros and cons. IoTConnect values security above all and works well in situations where the downsides are acceptable.
 1. Upside: security. Devices remain hidden from the internet. This avoids many security risks.
 2. Upside: ease of device configuration. The device only needs to be configured to connect to the message bus and remains unaware of who the consumers are. Changes to the consumers do not affect the device.
-3. Downside: on lightweight message busses consumers that are disconnected do not receive their messages. The device publisher is unaware and will not resend. This is not the problem of the device but of the message bus. Some enterprise message busses, like MS Azure Message Bus, support queuing of messages until delivered but can be difficult to configure. IoTConnect addresses this problem by supporting a history message that contains the recently published values at the cost of extra bandwidth to the consumer. More importantly, guaranteed delivery is overrated as it doesn't guarantee guaranteed processing.
+3. Downside: on lightweight message busses consumers that are disconnected do not receive their messages. The device publisher is unaware and will not resend. This is not the problem of the device but of the message bus. Some enterprise message busses, like MS Azure Message Bus, support queuing of messages until delivered but can be difficult to configure. IoTConnect addresses this problem by supporting a history message that contains the recently published values at the cost of extra bandwidth to the consumer. More importantly though, guaranteed delivery in itself is insufficient as it doesn't guarantee the message is processing.
    
 For delivery of critical messages an application level handshake is recommended. Even if the message is guaranteed to be delivered, there is no guarantee it is also processed. To address this, the receiver can publish a confirmation on the publishers input once the message is successfully processed. If the confirmation is not received the message is re-published. For example, a security alarm sensor repeats its alarm notification until the alarm service responds with a message that help is on the way. 
 

@@ -8,6 +8,7 @@ package examples
 		Pi-2 (no oc)                  222       6200 ms            41 ms
 		Pi-2 (mild oc)                222				5400 ms            37 ms
 		Pi-3B+ (no oc)      				  288 			7100 ms            45 ms
+  	Intel NUC5i3RYB  (i35010U)   5695        104 ms            29 ms
 */
 
 import (

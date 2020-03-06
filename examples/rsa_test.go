@@ -7,6 +7,7 @@ package examples
 		RSA Intel i5, 4570S      2200 ms             89 ms
 		RSA Pi-2 (mild oc)      94000 ms           4800 ms
 		RSA Pi-3 (no oc)       135000 ms           6600 ms
+		Intel Nuc                3600 ms            135 ms
 */
 
 import (
