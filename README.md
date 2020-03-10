@@ -8,6 +8,10 @@
 
 This standard is currently (Feb 2020) draft version 0. The standard is currently being validated with use-cases and a reference implementation.
 
+The standard can be found here:  [IoTConnect Standard](./iotconnect-standard.md)
+
+The golang reference implementation: [IotZone-golang](https://github.com/hspaay/iotzone.golang)
+
 ## Audience
 
 This standard is aimed at software developers and system implementors with a basic knowledge of operating systems and computing devices such as raspberry pi or industrial automation systems.
@@ -28,10 +32,6 @@ The use of a message bus is key to this standard to ensure security without the 
 The standard is technology agnostic and can be implemented with any programming language and message bus of choice. MQTT and HTTP based protocols are the most common formats for transporting the information.
 
 A reference implementation of library supporting the standard for MQTT based message bus is available along with several adapters that use it to publish information from zwave, onewire, cameras and other. A dashboard with configuration editor provides an example on how to use the published information.
-
-The standard can be found here:  [IoTConnect Standard](./iotconnect-standard.md)
-
-The golang reference implementation: [IotZone-golang](https://github.com/hspaay/iotzone.golang)
 
 ## Supported IoT Devices
 
