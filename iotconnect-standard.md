@@ -71,7 +71,7 @@ This standard defines the security aspects build into the specification.
 | Retainment    | A feature of a message bus that remembers that last published message. Not all message busses support retainment. It is used in publishing the values and discovery messages so new clients receive an instant update of the latest information |
 | Subscriber    | Consumer of information that uses node address to subscribe to information from that node.|
 | ZBM           | Zone Bridge Manager. Manages bridges to share information with other zones.
-| ZSAS          | Zone Signature Authority Service. This service manages keys and signatures of zone members |
+| ZCAS          | Zone Certificate Authority Service. This service manages keys and certificates of zone members |
 | ZSM           | Zone Security Monitor. Monitors publications in a zone and watches for intrusions.|
 | Zone          | An area in which information is shared between members of a zone. |
 
@@ -172,7 +172,7 @@ Nodes that are not compatible with this standard require an 'adapter' that publi
 
 For example, a ZWave adapter can obtain sensor data from ZWave nodes via a ZWave controller (gateway), and publish information of the ZWave nodes that are connected to this controller. The adapter, the gateway and each zwave device is represented as a node. 
 
-Publishers must use credentials to connect to a zone's message bus before they can publish. To publish securely, a publisher must also have to joined the zone through the Zone Signature Authority Service (ZSAS). More on that later.
+Publishers must use credentials to connect to a zone's message bus before they can publish. To publish securely, a publisher must also have to joined the zone through the Zone Certificate Authority Service (ZCAS). More on that later.
 
 Publishers are responsible for:
 
@@ -237,9 +237,9 @@ Anyone with permission to connect to the message bus can subscribe to messages p
 Consumers like user interfaces and services that do not publish are merely subscribers and do not classify as nodes. Open zones can allow anyone to subscribe without credentials.
 
 
-## Zone Signature Authority Service - ZSAS
+## Zone Certificate Authority Service - ZCAS
 
-The Zone Signature Authority Service issues keys to publishers that have joined the security zone. Publisher use these keys to create a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) for each message they publish so consumers can verify they come from the publisher and haven't been tampered with. The publisher identity information is signed by the ZSAS when the publisher joined the zone and verifies that the publisher is who it claims to be. For local zones the ZSAS is the highest authority and is protected by the message bus only allowing that service to publish on its address. For public zones the ZSAS itself includes a certificate for its domain in its identity.
+The Zone Certificate Authority Service issues keys and certificates to publishers that have joined the security zone. Publisher use these keys to create a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) for each message they publish so consumers can verify they are sent by the publisher and haven't been tampered with. The publisher identity is signed by the ZCAS when it joined the zone and verifies that the publisher is who it claims to be. For local zones the ZCAS is the highest authority and is protected by the message bus only allowing that service to publish on its address. For public zones the ZCAS itself includes a certificate for its domain in its identity.
 
 For more detail, see the security section
 
@@ -286,7 +286,7 @@ Node discovery message structure:
 | sender       | string    | **required** | Address of the publisher node of the message (zone/publisher/\$publisher/\$node) |
 | timestamp    | string    | **required** | Time the record is created |
 | identity     | Identity  | publishers   | Publisher identity used to identify the publisher in secure zones. Includes public keys for verifying and encryption. Only included with publishers |
-| identitySignature  | string    | optional     | Base64 encoded signature of the identity signed by the ZSAS. Empty for publishers that have not joined the secure zone.
+| identitySignature  | string    | optional     | Base64 encoded signature of the identity signed by the ZCAS. Empty for publishers that have not joined the secure zone.
 
 **Configuration Record**
 
@@ -306,7 +306,7 @@ The configuration record is used in both node configuration and input/output con
 
 **Identity Record**
 
-The identity record is included with nodes that are publishers and is intended to verify the identity of the publisher. It is signed by the ZSAS when the publisher joins a secure zone and renewed periodically. Consumers must verify the signature using the ZSAS public key when the publisher node is updated.
+The identity record is included with nodes that are publishers and is intended to verify the identity of the publisher. It is signed by the ZCAS when the publisher joins a secure zone and renewed periodically. Consumers must verify the signature using the ZCAS public key when the publisher node is updated.
 
 | Field           | type     | required     | Description |
 |:--------------- |:-------- | :----------  |:----------- |
@@ -696,7 +696,7 @@ To obtain a certificate the publisher must join a secure zone as described below
 
 A publisher joins the zone in order to receive keys and signature that can be verified by subscribers.
 
-Keys and signature are issued by the Zone Signature Authority Service - ZSAS. The ZSAS can work with a global Trusted Certificate Authority. This is required to verify signatures when sharing messages between zones.
+Keys and signature are issued by the Zone Certificate Authority Service - ZCAS. The ZCAS can work with a global Trusted Certificate Authority like Lets Encrypt. This is required to verify signatures when sharing messages between zones.
 
 The steps to join the zone:
 1. Generate a temporary keyset
@@ -710,32 +710,32 @@ Initially the publisher must create their own private and public keyset. The pub
 
 **Administrator Marks The Publisher As Trusted**
 
-The **ZSAS** is the Zone Signature Authority Service. Its sole purpose is to generate and sign keys for publishers.
+The **ZCAS** is the Zone Certificate Authority Service. Its purpose is to issue keys and certificates to publishers that have joined the zone.
 
-The ZSAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional identity can be required such as location, contact email, phone, administrator name and address. 
+The ZCAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional identity can be required such as location, contact email, phone, administrator name and address. 
 
-The method to establish trust can vary based on the situation. The following method is used in the ZSAS reference implementation. 
+The method to establish trust can vary based on the situation. The following method is used in the ZCAS reference implementation. 
 
 1. On installation of a new publisher, the administrator notes the publisher ID and the public key generated by that publisher. The publisher publishes its discovery using the temporary key.
 
-2. Next, the administrator logs in to the ZSAS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher and the public key match. If there is a match, the administrator informs the ZSAS that the publisher can be trusted. 
+2. Next, the administrator logs in to the ZCAS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher and the public key match. If there is a match, the administrator informs the ZCAS that the publisher can be trusted. 
 
-3. When a publisher status changes from untrusted to trusted, the ZSAS starts the cycle of key renewal as described below.
+3. When a publisher status changes from untrusted to trusted, the ZCAS starts the cycle of key renewal as described below.
    
 
-## Renewing Publisher Keys And Signature - ZSAS
+## Renewing Publisher Keys And Signature - ZCAS
 
-A publisher can not request a new set of keys. Instead, it is issued new keys and signature by the ZSAS automatically when its certificate has less than half its life left. This is triggered when a publisher publishes its own node information using a valid signature. Once a publisher uses the newly issued key and certificate, ZSAS removes the old key from its records. This key can no longer be used to obtain a new key and signature. It is therefore important that the publisher persists the new key and signature before publishing using the new keys. Note that the ZSAS does not store the private key it generated for the publisher. Once send to the publishers, only the public key is retained. The lifetime of a signed identity is relatively short. The default is 30 days. After half this time the identity is renewed by the ZSAS service. If no trusted public key is on record for the publisher, the publisher is marked as untrusted and the identity key is stored for review by administrator. 
+A publisher can not request a new set of keys. Instead, it is issued new keys and signature by the ZCAS automatically when its certificate has less than half its life left. This is triggered when a publisher publishes its own node information using a valid signature. Once a publisher uses the newly issued key and certificate, ZCAS removes the old key from its records. This key can no longer be used to obtain a new key and signature. It is therefore important that the publisher persists the new key and signature before publishing using the new keys. Note that the ZCAS does not store the private key it generated for the publisher. Once sent to the publishers, only the public key is retained. The lifetime of a signed identity is relatively short. The default is 30 days. After half this time the identity is renewed by the ZCAS service. If no trusted public key is on record for the publisher, the publisher is marked as untrusted and the identity key is stored for review by administrator. 
 
-The ZSAS listens for publisher discovery messages on address:
+The ZCAS listens for publisher discovery messages on address:
 
   **\{zone}/\{publisher}/\{node}/\$publisher**
 
-The new keys and signature is published on the publisher's zsas address. The publisher must subscribe to this address if it wishes to join the secure zone:
+The new keys and signature is published on the publisher's ZCAS address. The publisher must subscribe to this address if it wishes to join the secure zone:
 
   **\{zone}/\{publisher}/\{node}/\$keys**
 
-The payload is encrypted using the last known publisher's public encryption key. The publisher must decrypt it using its encryption private key. A separate keyset is used for encryption messages to the publisher. The zsas includes the encryption keys, which are renewed at the same time as the signature keys. Since encryption uses a different algorithm than signing and the public key might not be interchangeable, a separate keyset is used to prevent any dependencies. 
+The payload is encrypted using the last known publisher's public encryption key. The publisher must decrypt it using its encryption private key. A separate keyset is used for encryption messages to the publisher. The ZCAS includes the encryption keys, which are renewed at the same time as the signature keys. Since encryption uses a different algorithm than signing and the public key might not be interchangeable, a separate keyset is used to prevent any dependencies. 
 
 Message Structure:
 
@@ -743,11 +743,11 @@ Message Structure:
 |:------------     |:-------- | :----------  |:----------- |
 | address          | string   | **required** | The address on which the message is published |
 | identity         | Identity | **required** | The publisher identity information (see node publisher) |
-| identitySignature| string   | **required** | The signature of the identity, signed by the ZSAS
-| sender           | string   | **required** | Address of the sender, eg the zsas {zone}/\$zsas/\$publisher/\$node |
+| identitySignature| string   | **required** | The signature of the identity, signed by the ZCAS
+| sender           | string   | **required** | Address of the sender, eg the ZCAS {zone}/\$ZCAS/\$publisher/\$node |
 | privateKeyCrypto | string   | **required** | The publisher new private key for decrypting messages received by the publisher | 
 | privateKeySigning   | string   | **required** | The publisher new private key used to sign messages |
-| signature        | string   | **required** | The base64 encoded message signature, created by the sender (zsas) |
+| signature        | string   | **required** | The base64 encoded message signature, created by the sender (ZCAS) |
 | timestamp        | string   | **required** | Time the certificate was issued |
 | zoneKey          | string   | optional     | The zone shared secure for encrypting/decrypting zone wide messages|
 
@@ -779,7 +779,7 @@ Message Structure:
 
 ## Expiring Identity Keys
 
-Depending on policy settings, the ZSAS can choose not to auto renew the identity keys after they have expired. This is more secure but it requires that the publisher is connected before the expiration date.  Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the zone. 
+Depending on policy settings, the ZCAS can choose not to auto renew the identity keys after they have expired. This is more secure but it requires that the publisher is connected before the expiration date.  Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the zone. 
 
 ## Signing Messages
 
@@ -816,28 +816,28 @@ Consumers verify a signature by:
 
 ## Verifying Publisher Identity
 
-When a consumer receives a publisher discovery message it needs to verify that the publisher is indeed who it claims to be using the identity signed by the ZSAS service.
+When a consumer receives a publisher discovery message it needs to verify that the publisher is indeed who it claims to be using the identity signed by the ZCAS service.
 
-Note that the use of a ZSAS service is optional. It is valid to manually install identities on a publisher as long as they can be verified. The process below assumes the presence of a ZSAS.
+Note that the use of a ZCAS service is optional. It is valid to manually install identities on a publisher as long as they can be verified. The process below assumes the presence of a ZCAS.
 
-The ZSAS has the reserved publisher ID of '\$zsas' with a reserved node ID of '\$zsas'. It publishes its own identity (just like any other publisher) with its node on address '{zone}/\$zsas/\$zsas'. In order to verify signatures the consumer has to use the node public key. When the node updates, its identity record must be signed by ZSAS, which is the same process using the ZSAS public key.
+The ZCAS has the reserved publisher ID of '\$ZCAS' with a reserved node ID of '\$ZCAS'. It publishes its own identity (just like any other publisher) with its node on address '{zone}/\$ZCAS/\$ZCAS'. In order to verify signatures the consumer has to use the node public key. When the node updates, its identity record must be signed by ZCAS, which is the same process using the ZCAS public key.
 
-A ZSAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.iotconnect.zone', where zone has to be globally unique. 
+A ZCAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.iotconnect.zone', where zone has to be globally unique. 
 
-In order to verify the ZSAS all consumers must obtain the TCA certificate.
+In order to verify the ZCAS all consumers must obtain the TCA certificate.
 
 See the example code:
 * golang: examples/example.go
 * python: examples/example.py
 * javascript: examples/example.js
 
-Todo: how to ensure global uniqueness? UUID?, hash?, registration
+Todo: how to ensure global uniqueness? 
 
-The zone '$local' is reserved for local-only zones. In this case the ZSAS generates its own certificate and is considered the highest authority.
+The zone '$local' is reserved for local-only zones. In this case the ZCAS generates its own certificate and is considered the highest authority.
 
 ## Security Monitor - Zone Security Monitor (ZSM)
 
-The goal of the Zone Security Service is to detect invalid publications and alert the administrator.
+The goal of the Zone Security Monitor is to detect invalid publications and alert the administrator.
 
 The ZSM subscribes to published messages and validates that the messages carry a valid signature. If the signature is not valid then the administrator is notified.
 

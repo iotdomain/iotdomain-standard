@@ -10,7 +10,7 @@ This standard is currently (Feb 2020) draft version 0. The standard is currently
 
 The standard can be found here:  [IoTConnect Standard](./iotconnect-standard.md)
 
-The golang reference implementation: [IotZone-golang](https://github.com/hspaay/iotzone.golang)
+The golang reference implementation: [iotconnect.golang](https://github.com/hspaay/iotconnect.golang)
 
 ## Audience
 
@@ -131,15 +131,15 @@ Example of a home automation use-case:
 Bob would like to view the temperature outside and compare it with several places in his home. Bob has heard of openzwave and found a great little multi-sensor that also captures humidity and motion, great for future expansion of his project. A couple of philips Hue lightbulbs are connected to his wifi. 
 
 Bob wants to have a single dashboard where sensors and lightbulbs can be viewed and controlled.
-To view zwave Bob would have to buy a Vera controller or equivalent with web server and to control the lights a phone app is needed. Instead Bob uses IoTConnect with IotZone adapters for Zwave, Philips Hue, and dashboard. For hardware he purchases the Zwave sensors, a Raspberry Pi 3, a USB zwave controller and the Philips Hue lightbulbs. The price difference between with a Vera and the simpler USB controller pays for the Raspberry Pi.
+To view zwave Bob would have to buy a Vera controller or equivalent with web server and to control the lights a phone app is needed. Instead Bob uses IoTConnect with adapters for Zwave, Philips Hue, and dashboard. For hardware he purchases the Zwave sensors, a Raspberry Pi 3, a USB zwave controller and the Philips Hue lightbulbs. The price difference between with a Vera and the simpler USB controller pays for the Raspberry Pi.
 
-Putting it all together he plugs the Zwave USB controller into the raspberry pi, installs mosquitto for the MQTT message bus, and the IotZone adapters simply per instructions. Some minimal configuration is needed to secure the message bus and to point the adapters to the message bus and give them credentials to login. 
+Putting it all together he plugs the Zwave USB controller into the raspberry pi, installs mosquitto for the MQTT message bus, and the IotConnect adapters simply per instructions. Some minimal configuration is needed to secure the message bus and to point the adapters to the message bus and give them credentials to login. 
 
 To setup the dashboard he points the browser on his computer to the raspberry pi. The adapters already connected to the bus and announce themselves using the discovery feature of the standard. The dashboard shows the zwave and Hue available adapters. Bob subscribes to both and is presented with discovered nodes. Next the Hue bulbs are joined to the wifi as per manual, and the Zwave devices are plugged in and joined with the controller as per instructions of the zwave controller. Shortly after, the auto discovery show the devices are available. A few clicks and Bob adds the device to the dashboard and can view the temperature and control the switches.
 
 Embellished by the success, Bob adds a zwave security lock to his front door and pairs it with the zwave controller. The lock automatically shows up thanks to auto discovery and is ready to be configured with pin codes. The dashboard shows several inputs to control and configure the lock, one is to set a pin, and Bob is ready to go. 
 
-a pre-setup Raspberry IoTZone version (future plan) makes things even easier as the message bus and adapters are already setup.
+a pre-setup Raspberry IoTConnect version (future plan) makes things even easier as the message bus and adapters are already setup.
 
 
 # Credits
