@@ -28,7 +28,6 @@ This standard defines the process and messaging for discovery of devices and ser
 
 Note. The IETF draft "CoRE Resource Directory (draft-ietf-core-resource-directory-20) takes the approach where a centralized service provides a directory of resources. This approach works fine but does not fit within the concept of this standard for several reasons: Mainly it requires and additional direct connection between client and directory which adds an additional protocol with its own encoding. This standard is based on only requiring connections between client and message broker, keeping the attack footprint to a minimum. The protocol is JSON based for all messages. Second, it does not support sharing of information between zones. Last, it does not support the concept of last will and testament when a publisher unexpectedly disconnects from the network. Like most things it is possible to make it work but it is not the best fitting solution.
 
-
 ## Configuration
 
 Configuration of IoT devices is often done through a web portal of some sort from the device itself or a gateway. These web portals are not always as secure as they should be. They often require a login name and password and lack 2 factor authentication. Passwords are easily reused. Backdoors are sometimes left active. Overall security is lacking.
@@ -39,7 +38,7 @@ This standard defines the process and messaging for remote configuration of devi
 
 Nodes that can be configured contain a list of configuration records described in the node discovery. The configuration value can be updated with a configure command. This is described further in the configuration section. 
 
-## Security
+## Security And Privacy
    
 Security is a major concern with IoT devices. Problems exist in several areas:
 
@@ -47,7 +46,7 @@ Security is a major concern with IoT devices. Problems exist in several areas:
   
   2. Commercial devices that connect to a service provider share personal information without the user understanding what this information is, and without having control on how it is used. While regulations like Europe's [GDPR](https://en.wikipedia.org/wiki/General_Data_Protection_Regulation) attempt to address this ... somewhat, reports of data misuse and breaches remain all too frequent.
 
-  3. There is no easy and secure way to self-serve information over the internet. Often the only option is to trust a 3rd party service provider in this, which leads to the previous two problems. In addition the monthly recurring cost might be out of reach for many users.
+  3. There is no easy and secure way to self-serve information over the internet. It either requires opening a port in the firewall or use a 3rd party service provider, which leads to the previous two problems.
 
 This standard defines the security aspects build into the specification.
 
@@ -194,13 +193,20 @@ Address segments can only contain of alphanumeric, hyphen (-), and underscore (\
 > An address has the form: **\{zone}/\{publisher}/\{node}/\{command}\[/\{iotype}/\{instance}]**
 
 Where:
-* {zone} is the zone in which the node lives
-* {publisher} is the ID of the publisher that publishes the node information
-* {node} is the ID of the node that is being addressed
-* {command} the node command, be it node discovery, publishing its outputs, or setting its input.
-* {iotype} and {instance} refers to a particular input or output of the node
+* \{zone} is the zone in which the node information is published
+* \{publisher} is the ID of the publisher that publishes the node information
+* \{node} is the ID of the node that is being published
+* \{command} the node command, be it node discovery, publishing its outputs, or setting its input.
+* \{iotype} and \{instance} refers to a particular input or output of the node
 
-For message bus systems that do not support the '/' character as address separator, the separator character of the message bus implementation can be used. However, the message itself must contain the original address using the '/' character as the separator.
+For message bus systems that do not support the '/' character as address separator, the separator character of the message bus implementation can be used. However, the message itself must contain the original address using the '/' character as the separator to allow for interoperability between different message bus implementations.
+
+**Reserved Publisher IDs:**
+* \$zcas - zone certificate authority service
+* \$bridge - bridge service
+
+**Reserved Node IDs:**
+* \$publisher - all publishers have this as their node id
 
 **Reserved commands:**
 
@@ -239,7 +245,7 @@ Consumers like user interfaces and services that do not publish are merely subsc
 
 ## Zone Certificate Authority Service - ZCAS
 
-The Zone Certificate Authority Service issues keys and certificates to publishers that have joined the security zone. Publisher use these keys to create a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) for each message they publish so consumers can verify they are sent by the publisher and haven't been tampered with. The publisher identity is signed by the ZCAS when it joined the zone and verifies that the publisher is who it claims to be. For local zones the ZCAS is the highest authority and is protected by the message bus only allowing that service to publish on its address. For public zones the ZCAS itself includes a certificate for its domain in its identity.
+The Zone Certificate Authority Service issues keys and certificates to publishers that have joined the security zone. Publishers use these keys to create a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) for each message they publish so consumers can verify they are sent by the publisher and haven't been tampered with. The publisher identity is signed by the ZCAS when it joined the zone and verifies that the publisher is who it claims to be. For local zones the ZCAS is the highest authority and is protected by the message bus only allowing that service to publish on its address. For public zones the ZCAS itself includes a certificate for its domain in its identity.
 
 For more detail, see the security section
 
@@ -313,8 +319,8 @@ The identity record is included with nodes that are publishers and is intended t
 | expires         | string   | **required** | ISO8601 Date this identity expires |
 | location        | string   | optional     | Location of the publisher, city, province/state, country |
 | organization    | string   | optional     | Organization the publisher belongs to |
-| publicKeyCrypto | string   | **required** | Base64 encoded public key for encrypting messages to the publisher | 
-| publicKeySigning| string   | **required** | Base64 encoded public key for verifying publisher signatures |
+| cryptoPublicKey | string   | **required** | Base64 encoded public key for encrypting messages to the publisher | 
+| SigningPublicKey| string   | **required** | Base64 encoded public key for verifying publisher signatures |
 | publisher       | string   | **required** | The publisher node ID |
 | timestamp       | string   | **required** | Time the identity was re-signed |
 | url             | string   | optional     | URL of the publisher information page |
@@ -684,33 +690,27 @@ Status values:
 
 # Security
 
-Bus communication should be considered unsafe and must be protected against man-in-the-middle and spoofing attacks. All publications must be considered untrusted unless it is correctly signed.
+Bus communication should be considered unsafe and must be protected against man-in-the-middle and spoofing attacks. All publications must be considered untrusted unless it is correctly signed by its publisher and the publisher identity is verified by the ZCAS.
 
-Message signing is the second line of defence against attackers. (the first line is connecting to the message bus)
-
-In order to sign a message, a publisher must have a set of public/private keys. Initially these keys are created by the publisher on first use. These keys are intended to join the zone. If they are used to sign a message, the signature verification will succeed but without certificate the publisher cannot be verified.
-
-To obtain a certificate the publisher must join a secure zone as described below.
+To verify a publisher identitiy it must have joined a secure zone as described below. 
 
 ## Joining A Secure Zone
 
-A publisher joins the zone in order to receive keys and signature that can be verified by subscribers.
-
-Keys and signature are issued by the Zone Certificate Authority Service - ZCAS. The ZCAS can work with a global Trusted Certificate Authority like Lets Encrypt. This is required to verify signatures when sharing messages between zones.
+A publisher joins the zone in order to receive keys and identity signature that can be verified by subscribers. Keys and signature are issued by the Zone Certificate Authority Service - ZCAS. 
 
 The steps to join the zone:
-1. Generate a temporary keyset
-2. Publish the publiser node discovery message containing the public key
-3. Wait for the administator to mark the public key as trusted.
-4. Continue with the regular key renewal process
+1. Generate a public/private key pair on first use.
+2. Publish the publiser node discovery message containing the identitiy and public key as described in the node discovery section
+3. Wait for the administator to mark the publisher as trusted. This requires approval by the administrator.
+4. Accept regular updates of keys, identity and signatures from the ZCAS and re-publish changes to the node identity signature or public signing key.
 
-**Generating a temporary keyset**
+**Generating a temporary signing keyset**
 
-Initially the publisher must create their own private and public keyset. The publisher must publish its own node discovery message that includes this public key and an empty signature field.
+Initially the publisher must create their own private and public keyset. The public key is included in the publisher's identity node. 
 
 **Administrator Marks The Publisher As Trusted**
 
-The **ZCAS** is the Zone Certificate Authority Service. Its purpose is to issue keys and certificates to publishers that have joined the zone.
+The **ZCAS** is the Zone Certificate Authority Service. Its purpose is to issue keys and identity signatures to publishers that have joined the zone.
 
 The ZCAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional identity can be required such as location, contact email, phone, administrator name and address. 
 
@@ -720,12 +720,14 @@ The method to establish trust can vary based on the situation. The following met
 
 2. Next, the administrator logs in to the ZCAS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher and the public key match. If there is a match, the administrator informs the ZCAS that the publisher can be trusted. 
 
-3. When a publisher status changes from untrusted to trusted, the ZCAS starts the cycle of key renewal as described below.
+**ZCAS issues new keys and signs identity**
+
+When a publisher status changes from untrusted to trusted, the ZCAS starts the cycle of key and identity signature renewal as described below.
    
 
-## Renewing Publisher Keys And Signature - ZCAS
+## Renewing Publisher Keys And Identity Signature - ZCAS
 
-A publisher can not request a new set of keys. Instead, it is issued new keys and signature by the ZCAS automatically when its certificate has less than half its life left. This is triggered when a publisher publishes its own node information using a valid signature. Once a publisher uses the newly issued key and certificate, ZCAS removes the old key from its records. This key can no longer be used to obtain a new key and signature. It is therefore important that the publisher persists the new key and signature before publishing using the new keys. Note that the ZCAS does not store the private key it generated for the publisher. Once sent to the publishers, only the public key is retained. The lifetime of a signed identity is relatively short. The default is 30 days. After half this time the identity is renewed by the ZCAS service. If no trusted public key is on record for the publisher, the publisher is marked as untrusted and the identity key is stored for review by administrator. 
+A publisher that has joined the zone is issued new keys and identity signature by the ZCAS automatically when its identity has less than half its life left. This is triggered when a publisher publishes its own node information using a valid signature. Once a publisher uses the newly issued keys and signature, ZCAS removes the old key from its records. The publisher must persists the newly issued key and signature before publishing using the new keys. The ZCAS stores the public key and expiry of publisher identity so it knows to issue a new set of keys and identity signature. The lifetime of a signed identity is relatively short. The default is 30 days. After half this time the identity is renewed by the ZCAS service. If no trusted public key is on record for the publisher, the publisher is marked as untrusted and the identity key is stored for review by administrator. 
 
 The ZCAS listens for publisher discovery messages on address:
 
@@ -742,12 +744,11 @@ Message Structure:
 | Field            | type     | required     | Description |
 |:------------     |:-------- | :----------  |:----------- |
 | address          | string   | **required** | The address on which the message is published |
-| identity         | Identity | **required** | The publisher identity information (see node publisher) |
+| identity         | Identity | **required** | The publisher identity information including public keys (see node publisher) |
 | identitySignature| string   | **required** | The signature of the identity, signed by the ZCAS
 | sender           | string   | **required** | Address of the sender, eg the ZCAS {zone}/\$ZCAS/\$publisher/\$node |
-| privateKeyCrypto | string   | **required** | The publisher new private key for decrypting messages received by the publisher | 
-| privateKeySigning   | string   | **required** | The publisher new private key used to sign messages |
-| signature        | string   | **required** | The base64 encoded message signature, created by the sender (ZCAS) |
+| cryptoPrivateKey | string   | **required** | The publisher private key for decrypting messages send to the publisher | 
+| signingPrivateKey| string   | **required** | The publisher private key used to sign messages |
 | timestamp        | string   | **required** | Time the certificate was issued |
 | zoneKey          | string   | optional     | The zone shared secure for encrypting/decrypting zone wide messages|
 
@@ -763,13 +764,13 @@ Message Structure:
       "expires": "2019-02-12T15:55:09.000Z",
       "location": "Your City, Province/State, Country",
       "organization": "Your organization",
-      "signPublicKey": "...",
+      "signingPublicKey": "...",
       "timestamp": "2019-01-12T14:55:09.000Z",
       "url": "https://wwww.example.org",
     },
     "identitySignature": "...",
     "signature": "...",
-    "signPrivateKey": "...",
+    "signingPrivateKey": "...",
     "timestamp": "...",
     "zoneKey": "...",
   },
@@ -779,13 +780,21 @@ Message Structure:
 
 ## Expiring Identity Keys
 
-Depending on policy settings, the ZCAS can choose not to auto renew the identity keys after they have expired. This is more secure but it requires that the publisher is connected before the expiration date.  Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the zone. 
+By default, identity and crypto keys expire after 30 days. The ZCAS issues new sets of keys and identity signature when 15 days are remaining. These durations can be changed depending on what policy settings.
+Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the zone. 
 
 ## Signing Messages
 
 After all that work to issue identity and keys, it is now time to use them to make sure that published message are signed by the publisher. 
 
-Unless stated otherwise, a publisher MUST sign messages that it publishes and include it base64 encoded in the payload. In cases where the signature cannot be verified the consumer has the option to ignore unverified publishers.
+Unless stated otherwise, a publisher MUST sign messages that it publishes and include it base64 encoded in the signature field alongside the message in the payload. In cases where the signature cannot be verified the consumer has the option to ignore unverified publishers.
+
+~~~json
+{
+  "message": {...},
+  "signature" : "..."
+}
+~~~
 
 For example, an alarm company receives a security alert. The alert signature is verified to be from a registered client and not from a bad actor creating a distraction. The node location and alert timestamp are used to identify where and when the alert was given.
 
@@ -799,9 +808,9 @@ Publishers sign their messages by:
 3. base64 encode the signature for transportation
 
 See the example code:
-* golang: github: iotconnect.standard/examples/example.go
-* python: github: examples/example.py
-* javascript: github: examples/example.js
+* golang: https://github.com/hspaay/iotconnect.standard/tree/master/examples/edcsa_text.go
+* python: https://github.com/hspaay/iotconnect.standard/tree/master/examples/example.py
+* javascript: https://github.com/hspaay/iotconnect.standard/tree/master/examples/example.js
 
 
 ## Verifying A Message Signature
@@ -810,30 +819,29 @@ Consumers verify a signature by:
 
 1. Determine the publisher of the message from the address
 2. Determine the public key of the publisher from its discovery information
-3. Determine the hash of the message
+3. Determine the hash of the message following the same method as the publisher 
 4. Verify the signature using the hash and public key
 
+See the examples for more detail.
 
 ## Verifying Publisher Identity
 
 When a consumer receives a publisher discovery message it needs to verify that the publisher is indeed who it claims to be using the identity signed by the ZCAS service.
 
-Note that the use of a ZCAS service is optional. It is valid to manually install identities on a publisher as long as they can be verified. The process below assumes the presence of a ZCAS.
+The ZCAS has the reserved publisher ID of '\$zcas'. It publishes its own identity just like any other publisher with its node on address '{zone}/\$zcas/\$publisher/\$node' which is consistent with publishing nodes of any other publisher. The public key of the zcas identity is used to verify the publisher's identity signature.
 
-The ZCAS has the reserved publisher ID of '\$ZCAS' with a reserved node ID of '\$ZCAS'. It publishes its own identity (just like any other publisher) with its node on address '{zone}/\$ZCAS/\$ZCAS'. In order to verify signatures the consumer has to use the node public key. When the node updates, its identity record must be signed by ZCAS, which is the same process using the ZCAS public key.
+## Verifying ZCAS Identity
 
-A ZCAS can be registered with a global Trusted Certificate Authority (TCA) and creates certificates that are chained to the TCA. By default this uses 'Lets Encrypt' but this can be replaced by other public CAs. Use of a TCA is optional for local-only zones but required when briding between zones. The domain name used for registering a zone with the TCA is '{zone}.iotconnect.zone', where zone has to be globally unique. 
+Just like publishers, the ZCAS has an identity with a signature. There are two methods for ensuring that the ZCAS identity is valid:
 
-In order to verify the ZCAS all consumers must obtain the TCA certificate.
+1. Message bus permissions. Only the ZCAS has the credentials to publish on the zcas publisher address. 
+2. Global Certificate. The ZCAS is published with a certificate signed by a global CA like Lets Encrypt.
 
-See the example code:
-* golang: examples/example.go
-* python: examples/example.py
-* javascript: examples/example.js
+Restricting access to the zcas publisher address using ACLs is highly recommended. The use of a certificate is considered an extra security measure.
 
-Todo: how to ensure global uniqueness? 
+When the ZCAS is registered with a globally trusted Certificate Authority it includes its certificate with the publication of its node. Subscribers can verify this certificate with the global CA before trusting the ZCAS, and any other publishers of the zone. To facilitate the use of global zones the domain '{zone}.iotconnect.zone' is available, where zone is globally unique.
 
-The zone '$local' is reserved for local-only zones. In this case the ZCAS generates its own certificate and is considered the highest authority.
+The zone '$local' is reserved for local-only zones. In this case message bus permissions must secure the ZCAS publications and no certificate is used. ZCAS is considered the highest authority.
 
 ## Security Monitor - Zone Security Monitor (ZSM)
 
@@ -841,61 +849,86 @@ The goal of the Zone Security Monitor is to detect invalid publications and aler
 
 The ZSM subscribes to published messages and validates that the messages carry a valid signature. If the signature is not valid then the administrator is notified.
 
-
 # Sharing Information With Other Zones - Zone Bridge Manager (ZBM)
 
 While it is useful to share information within a zone, it can be even more useful if some of this information is shared with other zones.
 
-This is the task of a Zone Bridge. Zone Bridges are managed by the Zone Bridge Manager (ZBM) publisher. This service is responsible for creating and deleting bridge nodes.
+This is the task of a Zone Bridge. Zone Bridges are managed by the Zone Bridge Manager (ZBM) publisher. This service is responsible for creating and deleting bridge nodes. \$local zones cannot be bridged.
 
-A 'bridge node' connects to a remote zone's message bus and publishes information from the local zone message bus onto the remote zone's message bus. It is configured with connection attributes to access to the remote zone message bus. A Zone bridge has a node in both zones, joined both zones, and can be discovered like any other node.
+To create a bridge the ZBM is given the address and login information of a remote zone. The ZBM creates a new bridge node for that zone, which is published in both the local and remote zone. 
 
-When a node output is bridged, it is published under its own address. The zone part of the address does not change. It merely becomes available on the message bus of the bridged zone. The signature and content remain unchanged.
+When a node output is bridged, the bridge instance listens to publications for that output and republishes the message in the remote zone under its original address. The signature and content remain unchanged.
+
+By default the Zone bridge publishes the ZCAS node discovery from its home zone into the remote zone to enable consumers in the remote zone to verify the publishers from the local zone. 
+
+Members of a zone can discover remote publishers by subscribing to the zone/+/$publisher/$node address. This discovers the publishers of all available zones. To discover which zones have bridges into the current zone subscribe to +/$zcas/$publisher/$node.
+
+Note that a bridge is only needed if both zones are on separate message busses. If the zones share the same message bus then no bridge is needed as consumers can already subscribe to both zones.
 
 ## Managing Bridges
 
-TODO: These crud operations should not be command keywords. Or should they?
+Bridges are managed through the ZBM using its web client if available, or through the message bus. Either way is optional and up to the implementation. If managed through the message bus then the  addresses and messages below must be used.
 
 To create a bridge the ZBM service must be active in a zone. Publish the following command to create a new bridge:
->  **\{zone}/\$zbm/\$zbm/\$set/action/\$createBridge**
 
-The payload is the new bridge node ID. The new bridge has address: {zone}/\$zbm/{bridge id}
+>  **\{zone}/\$bridge/\$publisher/\$set/create/\bridge**
+
+The payload is a signed message with the new bridge node ID. The new bridge has address: {zone}/\$bridge/{bridgeId}
+
+Message Content:
+| Field       | type     | required     | Description |
+|:------------|:-------- |:------------ |:----------- |
+| address     | string   | **required** | The address on which this message is published |
+| bridgeId    | string   | **required** | The bridge to create or remove |
+| host        | string   | **required** | IP address or hostname of the remote bus
+| port        | integer  | optional     | port to connect to. Default is determined by protocol
+| protocol    | enum     | optional     | Protocol to use: "MQTT" (default), "REST"
+| clientId    | string   | optional     | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
+| loginId     | string   | **required** | Login identifier obtained from the administrator
+| credentials | string   | **required** | Password to connect with
+| sender      | string   | **required** | Address of the sender, eg: zone/publisher/node/\$node of the user that configures the bridge. |
+| timestamp   | string   | **required** | Time the record is created |
 
 To remove a bridge:
->  **\{zone}/\$zbm/\$zbm/\$set/action/\$removeBridge**
+>  **\{zone}/\$bridge/\$publisher/\$set/remove/\bridge**
 
-The payload is the bridge node ID.
+The payload is a signed message:
+| Field       | type     | required     | Description |
+|:------------|:-------- |:------------ |:----------- |
+| address     | string   | **required** | The address on which this message is published |
+| bridgeId    | string   | **required** | The bridge to create or remove |
+| sender      | string   | **required** | Address of the sender, eg: zone/publisher/node/\$node of the user that configures the bridge. |
+| timestamp   | string   | **required** | Time the record is created |
 
-A bridge publishes itself in both zones with its address. 
 
 ## Bridge Configuration
 
-Using the standard node configuration mechanism, the bridge is configured with the zone it is bridging to.
+Using the standard node configuration mechanism, the bridge is configured with the zone it is bridging to. 
 
-Bridge configuration variables can be set on address: {zone} / \$zbm / \{bridge} / \$configure:
+Bridge configuration can be set on address: {zone}/\$bridge/\{bridgeId}/\$configure:
 
-Bridges support the following configuration:
+Bridges support the following configuration settings:
 
 | Field        | value type   | value        | Description
 |:------------ |:---------    |:-----------  |:----------
 | host         | string       | **required** | IP address or hostname of the remote bus
 | port         | integer      | optional     | port to connect to. Default is determined by protocol
 | protocol     | enum         | optional     | Protocol to use: "MQTT" (default), "REST"
-| clientId     | string       | **required** | ID of the client to connect as
+| clientId     | string       | optional | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
 | loginId      | string       | **required** | Login identifier obtained from the administrator
-| credentials  | string       | **required** | Password to connect
+| credentials  | string       | **required** | Password to connect with
 
 ## Forward Nodes, Inputs or Outputs
 
 To forward nodes through the bridge, use the following input command
 * To forward an entire node:  
-> **\{zone}/\$zbm/\{bridge}/\$set/action/forwardNode**
+> **\{zone}/\$bridge/\{bridgeId}/\$set/forward/node**
 
-* To forward a node input:  
-> **\{zone}/\$zbm/\{bridge}/\$set/action/forwardInput**
+* To forward a node input value:  
+> **\{zone}/\$bridge/\{bridgeId}/\$set/forward/input**
 
-* To forward a node output:  
-> **\{zone}/\$zbm/\{bridge}/\$set/action/forwardOutput**
+* To forward a node output value:  
+> **\{zone}/\$bridge/\{bridgeId}/\$set/forward/output**
  
 The payload is a JSON document containing the message and signature:
 
@@ -907,28 +940,28 @@ The payload is a JSON document containing the message and signature:
 ~~~   
 Message structure:
 
-| Field            | type     | required     | Description |
-|:------------     |:-------- |:------------ |:----------- |
-| address          | string   | **required** | The address on which the message is published |
-| forward          | string   | **required** | The node, input or output address to forward |
-| forwardDiscovery | boolean  | optional     | Forward the node/output \$discovery publication, default=true |
-| forwardBatch     | boolean  | optional     | Forward the output \$batch publication(s), default=true |
-| forwardEvent     | boolean  | optional     | Forward the output \$event publication(s), default=true |
-| forwardHistory   | boolean  | optional     | Forward the output \$history publication(s), default=true |
-| forwardLatest    | boolean  | optional     | Forward the output \$latest publication(s), default=true |
-| forwardStatus    | boolean  | optional     | Forward the node \$status publication, default=true |
-| forwardValue     | boolean  | optional     | Forward the output \$value publication(s), default=true |
-| sender       | string   | **required** | Address of the sender, eg: zone/publisher/node/\$node of the user that configures the bridge. |
+| Field       | type     | required     | Description |
+|:------------|:-------- |:------------ |:----------- |
+| address     | string   | **required** | The address on which the message is published |
+| forward     | string   | **required** | The node, input or output address to forward |
+| discovery   | boolean  | optional     | Forward the node/output discovery publications, default=true |
+| batch       | boolean  | optional     | Forward the output \$batch publication(s), default=true |
+| event       | boolean  | optional     | Forward the output \$event publication(s), default=true |
+| history     | boolean  | optional     | Forward the output \$history publication(s), default=true |
+| latest      | boolean  | optional     | Forward the output \$latest publication(s), default=true |
+| status      | boolean  | optional     | Forward the node \$status publication, default=true |
+| value       | boolean  | optional     | Forward the output \$value publication(s), default=true |
+| sender      | string   | **required** | Address of the sender, eg: zone/publisher/node/\$node of the user that configures the bridge. |
 | timestamp   | string    | **required** | Time the record is created |
 
 
 ## Remove Bridged Nodes, Inputs or Outputs 
 
-To remove a forward use the following command:
+To remove a forward, use the following command:
 
- **\{zone} / \$zbm / \{bridge} / \$set / action / removeNode**
- **\{zone} / \$zbm / \{bridge} / \$set / action / removeInput**
- **\{zone} / \$zbm / \{bridge} / \$set / action / removeOutput**
+ **\{zone}/\$bridge/\{bridgeId}/\$set/remove/node**
+ **\{zone}/\$bridge/\{bridgeId}/\$set/remove/input**
+ **\{zone}/\$bridge/\{bridgeId}/\$set/remove/output**
 
 
 The payload is a JSON document containing a message and signature field.

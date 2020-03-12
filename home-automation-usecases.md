@@ -1,0 +1,3 @@
+# IoTConnect Home Automation Use-Cases
+
+work in progress...
