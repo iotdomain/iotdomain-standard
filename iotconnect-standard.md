@@ -214,6 +214,8 @@ For message bus systems that do not support the '/' character as address separat
 |:--------     |:--------|
 | \$batch      | Publication of a batch of events |
 | \$configure  | Command to update the node configuration |
+| \$create     | Control command to create a node. Intended for publishers that can create/delete nodes. |
+| \$delete     | Control command to delete a node |
 | \$event      | Publication of a single event with multiple values |
 | \$history    | publication of a list of values of a single output. Must be followed by an output type and instance |
 | \$input      | Publication of a node input discovery. Must be followed by an input type and instance |
@@ -584,9 +586,9 @@ The message structure:
 | sender       | string    | **required** | Address of the publisher node of the message |
 | timestamp    | string    | **required** | ISO8601 timestamp this message was created |
 
-# Updating Inputs
+# Input Commnads
 
-## \$set: Control Input Value
+## \$set: Set Input Value
 Publishers subscribe to receive commands to update the inputs of the node they manage.
 
 Address:  **\{zone}/\{publisher}/\{node}/\$set/\{type}/\{instance}**
@@ -598,7 +600,7 @@ The message structure:
 | address      | string    | **required**  | The address on which the message is published |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
 | sender       | string    | **required** | Address of the publisher node of the message |
-| value        | string    | **required** | The input value to set |
+| value        | string    | **required** | The control input value to set |
 
 For Example:
 
@@ -610,6 +612,67 @@ zone-1/openzwave/6/\$set/switch/0:
     "sender": "zone-1/mrbob/$publisher/$node",
     "timestamp": "2020-01-02T22:03:03.000PST",
     "value": "true",
+  },
+  "signature": "...",
+}
+~~~
+
+## \$create: Create Node
+
+Publishers where users can create and delete nodes subscribe to this command. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera.
+
+Address:  **\{zone}/\{publisher}/\$publisher/\$create/\{type}/\{instance}**
+
+The message structure:
+
+| Field        | Data Type | Required      | Description
+|:------------ |:--------- |:----------    |:-----------
+| address      | string    | **required**  | The address on which the message is published |
+| config       | map       | **required** | key-value pairs for configuration of the node. This is the same content as the config field in the $configure command
+| sender       | string    | **required** | Address of the publisher node of the message |
+| timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | nodeID       | string    | **required** | ID of the node to create. Must be unique within the publisher. For example the camera name |
+
+For Example, To create a new camera node with the ipcam publisher:
+
+~~~json
+zone-1/ipcam/$publisher/\$create/camera/0:
+{
+  "message": {
+    "address" : "zone-1/ipcam/$publisher/$create/camera/0",
+    "config" : { "url":"https://images.drivebc.ca/bchighwaycam/pub/cameras/149.jpg"},
+    "sender": "zone-1/mrbob/$publisher/$node",
+    "timestamp": "2020-01-02T22:03:03.000PST",
+    "nodeID": "Bennet-Bridge",
+  },
+  "signature": "...",
+}
+~~~
+
+
+## \$delete: Delete Node
+
+Publishers where users can create and delete nodes subscribe to this command. For example to delete an ip camera, the ip camera publisher can be told to delete the node for the camera.
+
+Address:  **\{zone}/\{publisher}/\$publisher/\$delete/\{type}/\{instance}**
+
+The message structure:
+
+| Field        | Data Type | Required      | Description
+|:------------ |:--------- |:----------    |:-----------
+| address      | string    | **required**  | The address on which the message is published |
+| sender       | string    | **required**  | Address of the publisher node of the message |
+| timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | nodeID       | string    | **required** | ID of the node to delete |
+
+For Example, To delete a previously created camera node:
+
+~~~json
+zone-1/ipcam/\$publisher/\$delete/camera/0:
+{
+  "message": {
+    "address" : "zone-1/ipcam/$publisher/$delete/camera/0",
+    "sender": "zone-1/mrbob/$publisher/$node",
+    "timestamp": "2020-01-02T22:03:03.000PST",
+    "nodeID": "Bennet-Bridge",
   },
   "signature": "...",
 }
@@ -871,7 +934,7 @@ Bridges are managed through the ZBM using its web client if available, or throug
 
 To create a bridge the ZBM service must be active in a zone. Publish the following command to create a new bridge:
 
->  **\{zone}/\$bridge/\$publisher/\$set/create/\bridge**
+>  **\{zone}/\$bridge/\$publisher/\$create/bridge/{bridgeid}**
 
 The payload is a signed message with the new bridge node ID. The new bridge has address: {zone}/\$bridge/{bridgeId}
 
@@ -879,24 +942,24 @@ Message Content:
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
 | address     | string   | **required** | The address on which this message is published |
-| bridgeId    | string   | **required** | The bridge to create or remove |
+| clientId    | string   | optional     | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
+| credentials | string   | **required** | Password to connect with
 | host        | string   | **required** | IP address or hostname of the remote bus
+| loginId     | string   | **required** | Login identifier obtained from the administrator
 | port        | integer  | optional     | port to connect to. Default is determined by protocol
 | protocol    | enum     | optional     | Protocol to use: "MQTT" (default), "REST"
-| clientId    | string   | optional     | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
-| loginId     | string   | **required** | Login identifier obtained from the administrator
-| credentials | string   | **required** | Password to connect with
+| nodeID      | string   | **required** | The node ID of the bridge to create |
 | sender      | string   | **required** | Address of the sender, eg: zone/publisher/node/\$node of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
-To remove a bridge:
->  **\{zone}/\$bridge/\$publisher/\$set/remove/\bridge**
+To delete a bridge:
+>  **\{zone}/\$bridge/\$publisher/\$delete/bridge/{bridgeid}**
 
 The payload is a signed message:
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
 | address     | string   | **required** | The address on which this message is published |
-| bridgeId    | string   | **required** | The bridge to create or remove |
+| nodeID      | string   | **required** | The node ID of the bridge to delete |
 | sender      | string   | **required** | Address of the sender, eg: zone/publisher/node/\$node of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
@@ -922,13 +985,13 @@ Bridges support the following configuration settings:
 
 To forward nodes through the bridge, use the following input command
 * To forward an entire node:  
-> **\{zone}/\$bridge/\{bridgeId}/\$set/forward/node**
+> **\{zone}/\$bridge/\{bridgeId}/\$set/node/forward**
 
 * To forward a node input value:  
-> **\{zone}/\$bridge/\{bridgeId}/\$set/forward/input**
+> **\{zone}/\$bridge/\{bridgeId}/\$set/input/forward**
 
 * To forward a node output value:  
-> **\{zone}/\$bridge/\{bridgeId}/\$set/forward/output**
+> **\{zone}/\$bridge/\{bridgeId}/\$set/output/forward**
  
 The payload is a JSON document containing the message and signature:
 
@@ -959,9 +1022,9 @@ Message structure:
 
 To remove a forward, use the following command:
 
- **\{zone}/\$bridge/\{bridgeId}/\$set/remove/node**
- **\{zone}/\$bridge/\{bridgeId}/\$set/remove/input**
- **\{zone}/\$bridge/\{bridgeId}/\$set/remove/output**
+ **\{zone}/\$bridge/\{bridgeId}/\$set/node/remove**
+ **\{zone}/\$bridge/\{bridgeId}/\$set/input/remove**
+ **\{zone}/\$bridge/\{bridgeId}/\$set/output/remove**
 
 
 The payload is a JSON document containing a message and signature field.
