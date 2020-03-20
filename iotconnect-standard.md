@@ -216,7 +216,7 @@ For message bus systems that do not support the '/' character as address separat
 | \$configure  | Command to update the node configuration |
 | \$create     | Control command to create a node. Intended for publishers that can create/delete nodes. |
 | \$delete     | Control command to delete a node |
-| \$event      | Publication of a single event with multiple values |
+| \$event      | Publication of all output values using a single event instead of individual output publications |
 | \$history    | publication of a list of values of a single output. Must be followed by an output type and instance |
 | \$input      | Publication of a node input discovery. Must be followed by an input type and instance |
 | \$latest     | Publication of a single output value including metadata. Must be followed by an output type and instance|
@@ -388,7 +388,7 @@ The message structure:
 |:----------- |:--------- |:---------    |:----------- |
 | address     | string    | **required** | The address on which the message is published |
 | config      | List of **Configuration Records**|optional|List of Configuration Records that describe in/output configuration. Only used when an input or output has their own configuration. See Node configuration record above for the definition |
-| datatype    | string    | optional     | Value datatype. One of boolean, enum, float, integer, jpeg, png, string, raw. Default is "string". |
+| datatype    | string    | optional     | Value datatype. See appending for datatypes.
 | default     | string    | optional     | Default output value |
 | description | string    | optional     | Description of the in/output for humans |
 | enum        | list      | optional*    | List of possible values. Required when datatype is enum |
@@ -535,7 +535,9 @@ zone-1/openzwave/6/temperature/0/\$history:
 
 ## \$event: Publish Event With Multiple Output Values
 
-The optional \$event publication indicates the publisher provides multiple output values with the same timestamp as a single event.
+The optional \$event publication indicates the publisher provides multiple output values with the same timestamp as a single event. This can be used in lieu of publishing output values separately and thus reduce bandwidth. It can also be useful to publish multiple values that are highly correlated. 
+
+The event value can include one, multiple or all node outputs. 
 
 Address:  **\{zone}/\{publisher}/\{node}/\$event**
 
@@ -544,7 +546,7 @@ The message structure:
 | Field        | Data Type | Required     | Description |
 |:----------   |:--------  |:-----------  |:------------ |
 | address      | string    | **required** | The address on which the message is published, zone/publisher/node/\$outputs |
-| event        | map       | **required** | Map with {output type/instance : value} 
+| event        | map       | **required** | Map with one or more {output type/instance : value} 
 | sender       | string    | **required** | Address of the publisher node of the message |
 | timestamp    | string    | **required** | timestamp of the event in ISO8601 format |
 
@@ -1039,7 +1041,29 @@ Message structure:
 | timestamp   | string    | **required** | Time the record is created |
 
 
-# Appendix A: Node Types
+# Appendix A: Value Datatypes
+
+The datatype attribute in input and output discovery messages describe what value is expected in publications. The possbible values are:
+
+| Datatype         | Description |
+|:-------------    |:------------      |
+| bool             | value is boolean converted to text: True, False  |
+| json             | value is a json type with multiple fields, converted to JSON (*)|
+| enum             | value is one of the strings provided in the enum attributes of the discovery message|
+| float            | value is a floating point number converted to text |
+| int              | value is a large, 64bit integer number convert to text |
+| string           | value is a string |
+| jpeg             | value is a base64 encoded jpeg image |
+| png              | value is a base64 encoded png image |
+| raw              | value is pure raw content |
+
+**Lists** Lists are supported by starting and ending the value with '[' and ']' and separating each value with a comma.
+
+For datatype int, when the value starts with '\[' it should be considered a list of integers instead of a single integer.  If an application expects a non-list value and receives a list, the first item in the list should be used. If an application expects a list and receives a non-list value it should be treated as a list of 1 item.
+
+**json values** Values with the json datatype are a catch-all for storing multiple fields as json payload. It should be avoided when possible as discovery provides no description of the structure. If possible rather use the $event publication that publishes all output values in a single event.
+
+# Appendix B: Node Types
 
 Nodes represent hardware or software services. The node types standardizes on the names of predefined devices or services.
 
@@ -1077,7 +1101,7 @@ Nodes represent hardware or software services. The node types standardizes on th
 | watervalve       | Water valve control unit |
 | weatherstation   | Weather station with multiple sensors and controls |
 
-# Appendix B: Predefined Node Attributes
+# Appendix C: Predefined Node Attributes
 
 Node attributes provide a description of the device or service. These are read-only and usually hard coded into the device or service. 
 
@@ -1093,7 +1117,7 @@ Node attributes provide a description of the device or service. These are read-o
 | type             | Type of node. Eg, multisensor, binary switch, See the Node Types list for predefined values |
 
 
-# Appendix C: Predefined Configuration Names
+# Appendix D: Predefined Configuration Names
 
 Standard configuration names
 
@@ -1106,14 +1130,14 @@ Standard configuration names
 | netmask       | Network netmask
 
 
-# Appendix D: Input and Output Types
+# Appendix E: Input and Output Types
 
 When available, units used in publication follow the SI standard 
+The value content is converted to text before publication.
 
 | input/output type| Units  | Value Datatype   | description |
 |:--------------  |:--------|:-----------------|:------------|
 | acceleration    | m/s2    | List of floats   | coordinates: x,y,z
-| action          |         | json      | perform an action; instance has the action name; message has parameters
 | airquality      |         | integer   | Number representing the air quality
 | alarm           |         | boolean   | Indicator of alarm status. True is alarm, False is no alarm
 | atmosphericpressure | kpa, mbar, Psi, hg | float|  
