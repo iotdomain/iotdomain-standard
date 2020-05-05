@@ -1,6 +1,6 @@
 <i src="iotconnect.png"></i>
 
-# The IotConnect Standard
+# The IoTConnect Standard
 
 [[TOC]]
 
@@ -8,9 +8,9 @@
 
 This standard is currently (Feb 2020) draft version 0. The standard is currently being validated with use-cases and a reference implementation.
 
-The standard can be found here:  [IoTConnect Standard](./iotc-standard.md)
+The standard can be found here:  [IoTConnect Standard](./iotconnect-standard.md)
 
-The golang reference implementation: [iotconnect.golang](https://github.com/hspaay/iotc.golang)
+The golang reference implementation: [iotc.golang](https://github.com/hspaay/iotc.golang)
 
 ## Audience
 
