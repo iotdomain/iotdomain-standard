@@ -217,7 +217,8 @@ For message bus systems that do not support the '/' character as address separat
 | \$create     | Control command to create a node. Intended for publishers that can create/delete nodes. |
 | \$delete     | Control command to delete a node |
 | \$event      | Publication of all output values using a single event instead of individual output publications |
-| \$history    | publication of a list of values of a single output. Must be followed by an output type and instance |
+| \$forecast   | publication of a list of projected output values. Must be followed by an output type and instance |
+| \$history    | publication of a list of historical output values. Must be followed by an output type and instance |
 | \$input      | Publication of a node input discovery. Must be followed by an input type and instance |
 | \$latest     | Publication of a single output value including metadata. Must be followed by an output type and instance|
 | \$node       | Publication of a node discovery |
@@ -489,6 +490,48 @@ Example of a publication on zone-1/openzwave/6/\$latest/temperature/0:
     "value": "20.6",
   },
   "signature": "..."
+}
+~~~
+
+## \$forecast: Publish Forecasted Output Values
+
+The payload for the '\$forecast' command contains an ordered list of the projected future values along with address information and signature. The forecast is published each time a value changes. 
+
+This is intended to be able to predict a future trend. The content is not required to persist between publisher restarts.
+
+Address:  **\{zone}/\{publisher}/\{node}/\$forecast/\{type}/\{instance}**
+
+The message structure:
+
+| Field        | Data Type | Required     | Description |
+|:----------   |:--------  |:-----------  |:------------ |
+| address      | string    | **required** | The address on which the message is published |
+| duration     | integer   | optional     | Nr of seconds of forecast
+| forecast     | list      | **required** | eg: \[\{"timestamp": "YYYY-MM-DDTHH:MM:SS.sssTZ","value": string}, ...] |
+|| timestamp   | string    | ISO8601 "YYYY-MM-DDTHH:MM:SS.sssTZ" |
+|| value       | string    | Value in string format using the node's unit |
+| sender       | string    | **required** | Address of the publisher node of the message |
+| timestamp    | string    | **required** | timestamp of the message |
+| unit         | string    | optional     | unit of value type |
+
+For example:
+
+~~~json
+zone-1/openzwave/6/temperature/0/\$forecast:
+{
+  "message": {
+    "address" : "zone-1/openzwave/6/$forecast/temperature/0",
+    "duration": "86400",
+    "forecast" : [
+      {"timestamp": "2020-01-16T16:00:01.000PST", "value" : "20.4" },
+      {"timestamp": "2020-01-16T17:00:01.000PST", "value" : "20.6" },
+      ...
+    ],
+    "sender": "zone-1/openzwave/$publisher/$node",
+    "timestamp": "2020-01-16T15:00:01.000PST",
+    "unit": "C",
+  },
+  "signature": "...",
 }
 ~~~
 
@@ -1012,6 +1055,7 @@ Message structure:
 | discovery   | boolean  | optional     | Forward the node/output discovery publications, default=true |
 | batch       | boolean  | optional     | Forward the output \$batch publication(s), default=true |
 | event       | boolean  | optional     | Forward the output \$event publication(s), default=true |
+| forecast    | boolean  | optional     | Forward the output \$forecast publication(s), default=true |
 | history     | boolean  | optional     | Forward the output \$history publication(s), default=true |
 | latest      | boolean  | optional     | Forward the output \$latest publication(s), default=true |
 | status      | boolean  | optional     | Forward the node \$status publication, default=true |
