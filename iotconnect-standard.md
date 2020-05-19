@@ -228,6 +228,7 @@ The standard predefines the following message types.
 | \$event      | Publication of all output values at once using a single event message |
 | \$keys       | Command to update the publisher keys and signature (encrypted) |
 | \$node       | Publication of a node discovery |
+| \$lwt        | Publisher last will and testament if supported |
 
 | Output message type | Purpose |
 |:--------     |:--------|
@@ -235,7 +236,6 @@ The standard predefines the following message types.
 | \$history    | publication of a list of historical output values |
 | \$latest     | Publication of a single output value including metadata |
 | \$output     | Publication of a node output discovery |
-| \$status     | Publication of the node status |
 | \$value      | Publication of an output sensor value without metadata |
 
 | Input message type | Purpose |
@@ -306,6 +306,7 @@ Node discovery message structure:
 | address      | string    | **required** | The address of the publication
 | attr         | map       | **required** | Attributes describing the node. Collection of key-value string pairs that describe the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
 | config       | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the configuration options. These can be modified with a ‘$configure’ message.|
+| nodeId       | string    | **required** | ID of this node
 | timestamp    | string    | **required** | Time the record is created |
 | identity     | Identity  | publishers   | Publisher identity used to identify the publisher in secure zones. Includes public keys for verifying and encryption. Only included with publishers |
 | identitySignature  | string    | optional     | Base64 encoded signature of the identity signed by the ZCAS. Empty for publishers that have not joined the secure zone.
@@ -408,7 +409,7 @@ The message structure:
 | max         | number    | optional     | Maximum possible in/output value |
 | min         | number    | optional     | Minimum possible in/output value |
 | timestamp   | string    | **required** | Time the record is created |
-| type        | string    | **required** | Type of output. See the output type list for standardized type names |
+| outputType  | string    | **required** | Type of output. See the output type list for standardized type names |
 | unit        | string    | optional     | The unit of the data type |
 
 Example payload for output discovery:
@@ -421,7 +422,7 @@ $local/openzwave/5/\$output/temperature/0:
     "datatype": "float",
     "instance": "0",
     "timestamp": "2020-01-20T23:33:44.999PST",
-    "type": "temperature",
+    "outputType": "temperature",
     "unit": "C",
   },
   "signature": "...",
@@ -617,7 +618,7 @@ zone-1/vehicle-1/\$publisher/\$event:
 
 The optional \$batch publication indicates the publisher provides multiple events. This is intended to reduce bandwidth in case for high frequency sampling of multiple values. Consumers must process the events in the provided order, as if they were sent one at a time.
 
-Address:  **\{zone}/\{publisher}/\{node}/\$batch**
+Address:  **\{zone}/\{publisherId}/\{nodeId}/\$batch**
 
 The message structure:
 
@@ -629,7 +630,25 @@ The message structure:
 | | event       | map       | Map with {output type/instance : value} |
 | timestamp    | string    | **required** | ISO8601 timestamp this message was created |
 
-# Input Commnads
+
+## \$lwt: Publish Last Will & Testament (MQTT)
+
+This message only applies when using a message bus that supports LWT (last will & testament) .
+
+The LWT option lets the message bus publish a message when the publisher connection is lost unexpectedly. A message with status "connected" and "disconnected" is sent by the publisher when connecting or gracefully disconnecting. The status "lost" is set through last will & testament feature and send by the message bus if the publisher unexpectedly disconnects. 
+
+Address:  **\{zone}/\{publisherId}/\$publisher/\$lwt**
+
+Message structure:
+The message structure:
+
+| Field        | Data Type | Required     | Description |
+|:----------   |:--------  |:-----------  |:------------ |
+| address      | string    | **required** | Address of the publication |
+| status       | string    | **required** | LWT status: "connected", "disconnected", "lost"
+
+
+# Input Commands
 
 Input commands are send by other publishers to provide input to a node. The messages of all input commands contain the address of the sender. 
 
@@ -767,40 +786,6 @@ zone1/openzwave/5/\$configure:
 }
 ~~~   
 
-# Publish Node Status
-
-TODO: is the node status a separate message or part of the discovery message? TBD
-
-The availability status of a node is published by its publisher when the availability changes or errors are encountered. 
-
-Address:  **\{zone}/\{publisher}/\{node}/\$status**
-
-| Address segment | Description
-|:--------------- |:------------
-| {zone}          | The zone in which discovery takes place. 
-| {publisher}     | The publisher of the node discovery which is handling the configuration update for that node.
-| {node}          | The node whose configuration is updated. 
-| \$status         | Keyword for node status. Published when the availability of a node changes or new errors are reported. It is published by the publisher of the node.
-
-
-Message Structure:
-
-| Field        | type     | required     | Description |
-|:-----------  |:-------- |:-----------  |:----------- |
-| address      | string   | **required** | Address of the publication |
-| errorCount   | integer  | optional     | Nr of errors since startup |
-| errorMessage | string   | optional     | Last reported error message |
-| errorTime    | string   | optional   | timestamp of last error message in ISO8601 format |
-| interval     | integer  | **required** | Maximum interval of status updates in seconds. If no updated status is received after this interval, the node is considered to be lost. |
-| lastSeen     | string   | **required** | timestamp in ISO8601 format that the publisher communicated with the node. |
-| status       | enum     | **required** | The node availability status. See below for valid values |
-| timestamp    | string   | **required** | Time the status was last updated, in ISO8601 format |
-
-Status values:
-* ready: node is ready to perform a task
-* asleep: node is a periodically listening and updates to the node can take a while before being processed.
-* error: node is in an error state and needs servicing
-* lost: communication with the node is lost
 
 # Security
 
@@ -1066,7 +1051,6 @@ Message structure:
 | forecast    | boolean  | optional     | Forward the output \$forecast publication(s), default=true |
 | history     | boolean  | optional     | Forward the output \$history publication(s), default=true |
 | latest      | boolean  | optional     | Forward the output \$latest publication(s), default=true |
-| status      | boolean  | optional     | Forward the node \$status publication, default=true |
 | value       | boolean  | optional     | Forward the output \$value publication(s), default=true |
 | sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
 | timestamp   | string    | **required** | Time the record is created |
@@ -1155,7 +1139,7 @@ Nodes represent hardware or software services. The node types standardizes on th
 
 # Appendix C: Predefined Node Attributes
 
-Node attributes provide a description of the device or service. These are read-only and usually hard coded into the device or service. 
+Node attributes provide a description of the device or service including its status. These are read-only and usually hard coded into the device or service. 
 
 | Key              | Value Description |
 |:-------------    |:------------      |
@@ -1167,6 +1151,32 @@ Node attributes provide a description of the device or service. These are read-o
 | make             | Node make or manufacturer |
 | model            | Node model |
 | type             | Type of node. Eg, multisensor, binary switch, See the Node Types list for predefined values |
+
+Node status attributes
+
+| Key           | Value Description |
+|:------------  |:------------      |
+| errors        | nr of errors reported on this device |
+| health        | health status of the device 0-100% |
+| lasterror     | most recent error message |
+| lastseen      | ISO time the device was last seen |
+| latency       | duration connect to sensor in milliseconds |
+| neighborcount | mesh network nr of neighbors |
+| neighbors     | mesh network device neighbors ID list [id,id,...] |
+| received      | Nr of messages received from device |
+| sent          | Nr of messages send to device |
+| runstate      | Node runtime status, see the status attributes below |
+
+Node 'runstate' attribute values
+| Key           | Value Description |
+|:------------  |:------------      |
+| error         | Node needs servicing |
+| disconnected  | Node has cleanly disconnected |
+| failed        | Node failed to start |
+| initializing  | Node is initializing |
+| lost          | Node connection unexpectedly lost |
+| ready         | Node is ready for use |
+| sleeping      | Node has gone into sleep mode, often a battery powered device |
 
 
 # Appendix D: Predefined Configuration Names
