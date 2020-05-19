@@ -186,55 +186,66 @@ These tasks are discussed in more detail in following sections.
 
 ### Addressing
 
-Information is published using an address on the message bus. This address consists of the node address to whom the information relates \{zone}/\{publisherID}/\{nodeID}, a command keyword, and optionally an input or output suffix.
+Information is published using an address on the message bus. This address consists of the node address to whom the information relates \{zone}/\{publisherID}/\{nodeID}, an input or output type and instance, and a message type. The input/output type and instance are omitted for message that relate to the node.
 
 Address segments can only contain of alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. 
 
 > Address format:
->  **\{zone} / \{publisher} / \{node} / \{command} \[ / \{iotype} / \{instance} \]**
+>  **\{zone} / \{publisherId} / \{nodeId} \[ / \{ioType} / \{instance} \] / \{messagetype\}**
 
 Where:
 * \{zone} is the zone in which the node information is published
-* \{publisher} is the ID of the publisher that publishes the node information
-* \{node} is the ID of the node that is being published
-* \{command} the node command, be it node discovery, publishing its outputs, or setting its input.
-* \{iotype} and \{instance} refers to a particular input or output of the node
-
+* \{publisherId} is the ID of the service that publishes the node, input and output information
+* \{nodeId} is the ID of the node that is being published
+* \{ioType} and \{instance} refers to a particular input or output of the node. 
+* \{messageType} indicates the content of the message, be it publishing of discovery or values.
 For message bus systems that do not support the '/' character as address separator, the separator character of the message bus implementation can be used. However, the message itself must contain the original address using the '/' character as the separator to allow for interoperability between different message bus implementations.
 
 **Reserved Publisher IDs:**
-* \$zcas - zone certificate authority service
-* \$bridge - bridge service
+
+Publishers with special roles have a reserved ID and only a single instance.
+
+* \$zcas - zone certificate authority service for assigning security keys and certificates
+* \$bridge - bridge service for bridging messages to other zones
+* \$discovery - discovery service for sending discovery info on request
 
 **Reserved Node IDs:**
-* \$publisher - all publishers have this as their node id
 
-**Reserved commands:**
+Nodes with a special role also have a reserved ID. 
 
-| command      | purpose |
+* \$publisher - all publishers have this as their own node id. 
+
+**Reserved message types:**
+
+The standard predefines the following message types.
+
+| Node message type | Purpose |
 |:--------     |:--------|
 | \$batch      | Publication of a batch of events |
-| \$configure  | Command to update the node configuration |
-| \$create     | Control command to create a node. Intended for publishers that can create/delete nodes. |
-| \$delete     | Control command to delete a node |
-| \$event      | Publication of all output values using a single event instead of individual output publications |
-| \$forecast   | publication of a list of projected output values. Must be followed by an output type and instance |
-| \$history    | publication of a list of historical output values. Must be followed by an output type and instance |
-| \$input      | Publication of a node input discovery. Must be followed by an input type and instance |
-| \$latest     | Publication of a single output value including metadata. Must be followed by an output type and instance|
+| \$configure  | Message to update the node configuration |
+| \$create     | Message to create a node. Only usable with publishers that can create/delete nodes |
+| \$delete     | Message to delete a node. Only usable with publishers that can create/delete nodes |
+| \$event      | Publication of all output values at once using a single event message |
+| \$keys       | Command to update the publisher keys and signature (encrypted) |
 | \$node       | Publication of a node discovery |
-| \$output     | Publication of a node output discovery. Must be followed by an output type and instance |
-| \$set        | Control the input value of a node, must be followed by an input type and instance |
+
+| Output message type | Purpose |
+|:--------     |:--------|
+| \$forecast   | publication of a list of projected output values |
+| \$history    | publication of a list of historical output values |
+| \$latest     | Publication of a single output value including metadata |
+| \$output     | Publication of a node output discovery |
 | \$status     | Publication of the node status |
-| \$value      | Publication of an output sensor value without metadata. Must be followed by an output type and instance |
-| \$keys       | Set the keys and signature of a publisher (encrypted) |
+| \$value      | Publication of an output sensor value without metadata |
 
-
-When an output is directly controlled by an input, the iotype and instance are the same. To control the input a message is sent to the node with the $set command followed by the iotype and instance. The node processes the command and if accepted updates the output by publishing the result with the $value and $latest commands.
+| Input message type | Purpose |
+|:--------     |:--------|
+| \$input      | Publication of an input discovery |
+| \$set        | Set the input value |
 
 ### Node Aliases
 
-When devices are replaced, the node identifier of the replacement can differ from the original. ZWave for example generates a new node ID each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID, which can take quite a bit of effort. 
+Node Aliases are intended to support replacing devices while retaining the input and output addresses. When devices are replaced, the node identifier of the replacement can differ from the original. ZWave for example generates a new node ID each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID, which can take quite a bit of effort. 
 
 To address this problem, nodes can be configured with an 'alias' ID. When a node alias is set, all input and output publications use the alias instead of the node ID.
 
@@ -242,10 +253,9 @@ The node alias can be set through the node $configure command. Support for node 
 
 ## Subscribers
 
-Anyone with permission to connect to the message bus can subscribe to messages published in the zone. Publishers subscribe as well in order to handle key updates, configuration updates and input updates.
+Anyone with permission to connect to the message bus can subscribe to messages published in the zone. Publishers subscribe as well in order to handle configuration updates and input messages.
 
-Consumers like user interfaces and services that do not publish are merely subscribers and do not classify as nodes. Open zones can allow anyone to subscribe without credentials.
-
+Consumers such as user interfaces and services that do not publish, are merely subscribers and do not publish as nodes. Open zones can allow anyone to subscribe without credentials. To control configuration and inputs however, consumers must be a publisher with a valid signature.
 
 ## Zone Certificate Authority Service - ZCAS
 
@@ -256,7 +266,7 @@ For more detail, see the security section
 
 # Discovery
 
-Support for discovery lets consumers find the information they are interested in without the need for a central directory. The objective is for the node to be sufficiently described so consumers can identify and configure it without further information.
+Support for discovery lets consumers find the information they are interested in. The objective is for the node to be sufficiently described so consumers can identify and configure it without further information.
 
 Publishers are responsible for publishing discovery messages for nodes, their inputs and outputs. The discovery data describes the nodes in detail, including their type, attributes and configurations.
 
@@ -266,11 +276,14 @@ Just like publications of the various values, the discovery publications consist
 
 Where supported, discovery messages are published with retainment. When connection to the message bus was lost and is re-established, the discovery messsages are re-published in case the retainment cache was cleared.
 
-On message busses without retainment and without a central directory, discovery messages are re-published periodically. The default interval is once a day but can be changed through publisher configuration. Subscribers must do their own caching of discovery information in case they disconnect. The downside of this approach is that it can take up to a day to discover new publishers. 
+When retainment is not available on the message bus, a discovery service can be used for the zone that republishes discovery messages when a request message is received on its input. When subscribers connect to the message bus they send the discovery service a request. The discovery service republishes the discovery messages it received within the last 24 hours, within 1 minute after receiving discovery requests. This is a very simple service that simply republishes what it received. The 1 minute period is intended to prevent a message storm when multiple publishers connect to the bus at the same time.
+
+In all cases discovery messages are re-published periodically to indicate the publisher is still alive and its nodes are available. The default interval is once a day but can be changed through publisher configuration. Without retainment this is best combined with a discovery service. 
+
 
 ## Discover Nodes
 
-Node discovery messages contain a detailed description of the node. It does not contain information on inputs and outputs as these are published separately to allow bridges to bridge only specified inputs or outputs.
+Node discovery messages contain a detailed description of the node. It does not contain information on inputs and outputs as these are published separately. This reduces the amount of traffic for simple consumers that only subscribe to certain types of inputs or outputs.
 
 Node discovery address:
 
@@ -361,33 +374,33 @@ Inputs and outputs discovery are published separately from the node. The discove
 
 Address of input discovery:
 
-> **\{zone}/\{publisher}/\{node}/\$input/\{inputType}/\{instance}**
+> **\{zone}/\{publisherId}/\{nodeId}/\{inputType}/\{instance}/\$input/**
 
 Address of output discovery:
 
-> **\{zone}/\{publisher}/\{node}/\$output/\{outputType}/\{instance}**
+> **\{zone}/\{publisherId}/\{nodeId}/\{outputType}/\{instance}/\$output**
 
 | Address segment | Description |
 | :-------------- | :---------- |
-| {zone}       | The zone in which the node lives |
-| {publisher}  | The service that is publishing the information. A publisher provides its identity when publishing a node discovery. The publisher Id is unique within its zone.  |
-| {node}       | ID of the node that owns the input or output. This is the node identifier or alias. |
-| \$input      | Command for input discovery. |
-| {inputType}  | Type identifier of the input. For a list of predefined types see Appendix D |
-| \$output     | Command for output discovery. |
-| {outputType} | Type identifier of the output. For a list of predefined types see Appendix D |
-| {instance}   | The instance of the input or output on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning. |
+| {zone}          | The zone in which the node lives |
+| {publisherId}   | The service that is publishing the information |
+| {nodeId}        | ID or alias of the node that owns the input or output |
+| {inputType}     | Type identifier of the input. For a list of predefined types see Appendix D |
+| {outputType}    | Type identifier of the output. For a list of predefined types see Appendix D |
+| {instance}      | The instance of the input or output on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning|
+| \$input         | Message type for input discovery, or |
+| \$output        | Message type for output discovery |
 
 For example, the discovery of a temperature sensor on node '5', published by a service named 'openzwave', is published on address:
 
-  > **$local/openzwave/5/\$output/temperature/0**
+  > **$local/openzwave/5/temperature/0/\$output**
 
 The message structure:
 
 | Field       | Data Type | Required     | Description |
 |:----------- |:--------- |:---------    |:----------- |
 | address     | string    | **required** | Address of the publication |
-| config      | List of **Configuration Records**|optional|List of Configuration Records that describe in/output configuration. Only used when an input or output has their own configuration. |
+| config      | List of **Configuration Records**|optional|List of Configuration Records that describe in/output configuration. Only used when an input or output has their own configuration |
 | datatype    | string    | optional     | Value datatype. See appending for datatypes, default is string
 | description | string    | optional     | Description of the in/output for humans |
 | enumValues  | list      | optional*    | List of possible values. Required when datatype is enum |
@@ -395,7 +408,7 @@ The message structure:
 | max         | number    | optional     | Maximum possible in/output value |
 | min         | number    | optional     | Minimum possible in/output value |
 | timestamp   | string    | **required** | Time the record is created |
-| type        | string    | **required** | Type of output. See the output type list for standardized type names. |
+| type        | string    | **required** | Type of output. See the output type list for standardized type names |
 | unit        | string    | optional     | The unit of the data type |
 
 Example payload for output discovery:
@@ -404,7 +417,7 @@ Example payload for output discovery:
 $local/openzwave/5/\$output/temperature/0:
 {
   "message": {
-    "address": "$local/openzwave/5/$output/temperature/0",
+    "address": "$local/openzwave/5/temperature/0/$output",
     "datatype": "float",
     "instance": "0",
     "timestamp": "2020-01-20T23:33:44.999PST",
@@ -420,16 +433,16 @@ $local/openzwave/5/\$output/temperature/0:
 Publishers monitor the outputs of their nodes and publish updates to node output values when there is a change. Output values are published using various commands depending on the content, as described in the following paragraphs.
 
 >The general output value address is:
->  **\{zone}/\{publisher}/\{node}/\{$command}/\[\{type}/\{instance}/]**
+>  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\{$messageType}**
 
 | Address segment | Description|
 |:--------------- |:-----------|
-| {zone}          | The zone in which publishing takes place. |
-| {publisher}     | The service that is publishing the information. The publisher Id is unique within its zone.|
+| {zone}          | The zone in which publishing takes place |
+| {publisher}     | The service that is publishing the information. The publisher Id is unique within its zone |
 | {node}          | The node that owns the input or output. This is the node identifier |
-| {type}          | The type of output, for example "temperature". This standard includes a list of output types. |
-| {instance}      | The instance of the type on the node. |
-| {$command}      | Command that indicates the purpose of the publication as described in the following paragraphs: $value, $latest, ...|
+| {type}          | The type of output, for example "temperature". This standard includes a list of output types |
+| {instance}      | The instance of the type on the node |
+| {$messageType}  | Type of output value publication as described in the following paragraphs: $value, $latest, ...|
 
 With exception of the \$value command, all publications contain a payload consisting of a JSON object with a message and signature in the form:
 
@@ -445,17 +458,17 @@ The signature is the hash of the message content, encrypted using the private ke
 
 ## \$value: Publish Single 'no frills' Output Value
 
-The payload used with the '\$value' command is the pure information as text, without any signature or other metadata. It is the only message without the json message and signature as described above.
+The payload used with the '\$value' message type is the pure information as text, without any signature or other metadata. It is the only message without the json message and signature as described above.
 
 The \$value publication is the fallback that every publisher *MUST* publish. It is intended for interoperability with highly constrained devices or 3rd party software that do not support JSON parsing. The payload is therefore the straight value.
 
-Address:  **\{zone}/\{publisher}/\{node}/\$value/\{type}/\{instance}**
+Address:  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$value**
 
 Payload: Output value, converted to string. There is no message JSON and no signature.
 
 Example:
 ~~~
-zone-1/openzwave/6/\$value/temperature/0: "20.6"
+zone-1/openzwave/6/temperature/0/\$value: "20.6"
 ~~~
 
 ## \$latest: Publish Latest Output With Metadata
@@ -464,7 +477,7 @@ The \$latest publication contains the latest known value of the output including
 
 This is the recommended publication publishing updates to single value sensors. See also the \$event publication for multiple values that are related. 
 
-Address:  **\{zone}/\{publisher}/\{node}/\$latest/\{type}/\{instance}**
+Address:  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$latest**
 
 The message structure is as follows:
 
@@ -493,7 +506,7 @@ Example of a publication on zone-1/openzwave/6/\$latest/temperature/0:
 
 The payload for the '\$forecast' command contains an ordered list of the projected future values along with address information and signature. The forecast is published each time a value changes. 
 
-Address:  **\{zone}/\{publisher}/\{node}/\$forecast/\{type}/\{instance}**
+Address:  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$forecast**
 
 The message structure:
 
@@ -513,7 +526,7 @@ For example:
 zone-1/openzwave/6/$forecast/temperature/0:
 {
   "message": {
-    "address" : "zone-1/openzwave/6/$forecast/temperature/0",
+    "address" : "zone-1/openzwave/6/temperature/0/$forecast",
     "duration": "86400",
     "forecast" : [
       {"timestamp": "2020-01-16T16:00:01.000PST", "value" : "20.4" },
@@ -531,7 +544,7 @@ zone-1/openzwave/6/$forecast/temperature/0:
 
 The payload for the '\$history' command contains an ordered list of the recent values. The history is published each time a value changes. The history publication is optional and intended for users that like to view a 24 hour trend. It can also be used to check for missing values in case transport reliability is untrusted. The content is not required to persist between publisher restarts.
 
-Address:  **\{zone}/\{publisher}/\{node}/\$history/\{type}/\{instance}**
+Address:  **\{zone}/\{publisher}/\{node}/\{type}/\{instance}/\$history**
 
 The message structure:
 
@@ -548,10 +561,10 @@ The message structure:
 For example:
 
 ~~~json
-zone-1/openzwave/6/$history/temperature/0:
+zone-1/openzwave/6/temperature/0/$history:
 {
   "message": {
-    "address" : "zone-1/openzwave/6/$history/temperature/0",
+    "address" : "zone-1/openzwave/6/temperature/0/$history",
     "duration": "86400",
     "history" : [
       {"timestamp": "2020-01-16T15:20:01.000PST", "value" : "20.4" },
@@ -627,7 +640,7 @@ Additional restrictions can be imposed by limiting updates to specific publisher
 ## \$set: Set Input Value
 Publishers subscribe to receive commands to update the inputs of the node they manage.
 
-Address:  **\{zone}/\{publisher}/\{node}/\$set/\{type}/\{instance}**
+Address:  **\{zone}/\{publisher}/\{node}/\{type}/\{instance}/\$set**
 
 The message structure:
 
@@ -635,17 +648,17 @@ The message structure:
 |:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required** | Address of the publication |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
-| sender       | string    | **required** | Address of the sender node of the message |
+| sender       | string    | **required** | Address of the sender node of the message (zone/publisherId/nodeId) |
 | value        | string    | **required** | The control input value to set |
 
 For Example:
 
 ~~~json
-zone-1/openzwave/6/\$set/switch/0:
+zone-1/openzwave/6/switch/0/\$set:
 {
   "message": {
-    "address" : "zone-1/openzwave/6/$set/switch/0",
-    "sender": "zone-1/mrbob/$publisher/$node",
+    "address" : "zone-1/openzwave/6/switch/0/\$set",
+    "sender": "zone-1/mrbob/$publisher",
     "timestamp": "2020-01-02T22:03:03.000PST",
     "value": "true",
   },
@@ -655,9 +668,9 @@ zone-1/openzwave/6/\$set/switch/0:
 
 ## \$create: Create Node
 
-Publishers where users can create and delete nodes subscribe to this command. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera.
+Publishers where users can create and delete nodes subscribe to this command. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera where nodeId is the camera ID.
 
-Address:  **\{zone}/\{publisher}/\$publisher/\$create**
+Address:  **\{zone}/\{publisherId}/\{nodeId\}/\$create**
 
 The message structure:
 
@@ -665,8 +678,7 @@ The message structure:
 |:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required**  | Address of the publication |
 | config       | map       | **required**  | key-value pairs for configuration of the node. This is the same content as the config field in the $configure command
-| nodeID       | string    | optional      | ID of the new node. The publisher creates an ID if not provided|
-| sender       | string    | **required**  | Address of the sender node of the message |
+| sender       | string    | **required** | Address of the sender node of the message (zone/publisherId/nodeId) |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | nodeID       | string    | **required** | ID of the node to create. Must be unique within the publisher. For example the camera name |
 
 For Example, To create a new camera node with the ipcam publisher:
@@ -675,13 +687,12 @@ For Example, To create a new camera node with the ipcam publisher:
 zone-1/ipcam/$publisher/\$create:
 {
   "message": {
-    "address" : "zone-1/ipcam/$publisher/$create",
+    "address" : "zone-1/ipcam/Kelowna-Bennett/$create",
     "config" : { 
       "url":"https://images.drivebc.ca/bchighwaycam/pub/cameras/149.jpg",
       "name": "Kelowna Bennett bridge",
-      "alias": "Kelowna-Bennett"
       },
-    "sender": "zone-1/mrbob/$publisher/$node",
+    "sender": "zone-1/mrbob/$publisher",
     "timestamp": "2020-01-02T22:03:03.000PST",
     "nodeID": "Bennet-Bridge",
   },
@@ -694,26 +705,24 @@ zone-1/ipcam/$publisher/\$create:
 
 Publishers that support creation and deletion of nodes, subscribe to this command. For example to delete an ip camera, the ip camera publisher can be told to delete the camera node.
 
-Address:  **\{zone}/\{publisher}/\$publisher/\$delete**
+Address:  **\{zone}/\{publisherId}/{nodeId}/\$delete**
 
 The message structure:
 
 | Field        | Data Type | Required      | Description
 |:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required**  | Address of the publication |
-| nodeID       | string    | **required**  | ID of the node to delete |
 | sender       | string    | **required**  | Address of the publisher node of the message |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | 
 
 For Example, To delete a previously created camera node:
 
 ~~~json
-zone-1/ipcam/\$publisher/\$delete/camera/0:
+zone-1/ipcam/\Kelowna-Bennett/\$delete:
 {
   "message": {
-    "address" : "zone-1/ipcam/$publisher/$delete",
-    "nodeID": "Bennet-Bridge",
-    "sender": "zone-1/mrbob/$publisher/$node",
+    "address" : "zone-1/ipcam/Kelowna-Bennet/$delete",
+    "sender": "zone-1/mrbob/$publisher",
     "timestamp": "2020-01-02T22:03:03.000PST",
   },
   "signature": "...",
@@ -751,7 +760,7 @@ zone1/openzwave/5/\$configure:
     "config": {
       "name": "My new name"
     },
-    "sender": "zone1/mrbob/$publisher/$node",
+    "sender": "zone1/mrbob/$publisher",
     "timestamp": "2020-01-20T23:33:44.999PST",
   },
   "signature": "...",
@@ -836,11 +845,11 @@ A publisher that has joined the zone is issued new keys and identity signature b
 
 The ZCAS listens for publisher discovery messages on address:
 
-  **\{zone}/\{publisher}/\{node}/\$publisher**
+  **\{zone}/\{publisherId}/\{nodeId}/\$publisher**
 
 The new keys and signature is published on the publisher's ZCAS address. The publisher must subscribe to this address if it wishes to join the secure zone:
 
-  **\{zone}/\{publisher}/\{node}/\$keys**
+  **\{zone}/\{publisherId}/\{nodeId}/\$keys**
 
 The payload is encrypted using the last known publisher's public encryption key. The publisher must decrypt it using its encryption private key. A separate keyset is used for encryption messages to the publisher. The ZCAS includes the encryption keys, which are renewed at the same time as the signature keys. Since encryption uses a different algorithm than signing and the public key might not be interchangeable, a separate keyset is used to prevent any dependencies. 
 
@@ -851,7 +860,7 @@ Message Structure:
 | address          | string   | **required** | Address of the publication |
 | identity         | Identity | **required** | The publisher identity information including public keys (see node publisher) |
 | identitySignature| string   | **required** | The signature of the identity, signed by the ZCAS
-| sender           | string   | **required** | Address of the sender, eg the ZCAS {zone}/\$ZCAS/\$publisher/\$node |
+| sender           | string   | **required** | Address of the sender, eg the ZCAS {zone}/\$ZCAS/\$publisher |
 | cryptoPrivateKey | string   | **required** | The publisher private key for decrypting messages send to the publisher | 
 | signingPrivateKey| string   | **required** | The publisher private key used to sign messages |
 | timestamp        | string   | **required** | Time the certificate was issued |
@@ -861,10 +870,10 @@ Message Structure:
 ~~~json
 {
   "message": {
-    "address": "...",
+    "address": "zone/publisherId/$publisher/$keys",
     "cryptoPrivateKey": "...",
     "identity": {
-      "address": "zone/publisher/$publisher",
+      "address": "zone/publisherId/$publisher",
       "cryptoPublicKey": "...",
       "expires": "2019-02-12T15:55:09.000Z",
       "location": "Your City, Province/State, Country",
@@ -976,9 +985,9 @@ Bridges are managed through the ZBM using its web client if available, or throug
 
 To create a bridge the ZBM service must be active in a zone. Publish the following command to create a new bridge:
 
->  **\{zone}/\$bridge/\$publisher/\$create**
+>  **\{zone}/\$bridge/\{bridgeId}/\$create**
 
-The payload is a signed message with the new bridge node ID. The new bridge has address: {zone}/\$bridge/{bridgeID}
+The payload is a signed message with the new bridge node ID. The new bridge has address: {zone}/\$bridge/{bridgeId}
 
 Message Content:
 | Field       | type     | required     | Description |
@@ -991,18 +1000,17 @@ Message Content:
 | password    | string   | **required** | Password to connect with
 | port        | integer  | optional     | port to connect to. Default is determined by protocol
 | protocol    | enum     | optional     | Protocol to use: "MQTT" (default), "REST"
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher/\$node of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 To delete a bridge:
->  **\{zone}/\$bridge/\$publisher/\$delete**
+>  **\{zone}/\$bridge/\{bridgeId}/\$delete**
 
 The payload is a signed message:
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
-| node        | string   | **required** | Address of the bridge publisher |
-| nodeId      | string   | **required** | The node ID of the bridge to delete |
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher/\$node of the user that configures the bridge. |
+| address     | string   | **required** | Address of the publication |
+| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 
@@ -1022,21 +1030,21 @@ Bridges support the following configuration settings:
 | password     | string       | **required** | Password to connect with
 | port         | integer      | optional     | port to connect to. Default is determined by protocol
 | protocol     | enum         | optional     | Protocol to use: "MQTT" (default), "REST"
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher/\$node of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 ## Forward Nodes, Inputs or Outputs
 
 A bridge node has inputs to manage it forwarding a node, specific input or specific output. 
 
-* To forward a node through the bridge, use the following input command
-> **\{zone}/\$bridge/\{bridgeId}/\$set/node/forward**
+* To forward a node through the bridge, use the following input set command
+> **\{zone}/\$bridge/\{bridgeId}/forward/node/$set**
 
-* To forward a node input value:  
-> **\{zone}/\$bridge/\{bridgeId}/\$set/input/forward**
+* To forward an input:  
+> **\{zone}/\$bridge/\{bridgeId}/forward/input/$set**
 
-* To forward a node output value:  
-> **\{zone}/\$bridge/\{bridgeId}/\$set/output/forward**
+* To forward an output:  
+> **\{zone}/\$bridge/\{bridgeId}/forward/output/$set**
  
 The payload is a JSON document containing the message and signature:
 
@@ -1050,7 +1058,7 @@ Message structure:
 
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
-| address     | string    | **required** | Address of the publication |
+| address     | string   | **required** | Address of the publication |
 | forward     | string   | **required** | The node, input or output address to forward |
 | discovery   | boolean  | optional     | Forward the node/output discovery publications, default=true |
 | batch       | boolean  | optional     | Forward the output \$batch publication(s), default=true |
@@ -1060,7 +1068,7 @@ Message structure:
 | latest      | boolean  | optional     | Forward the output \$latest publication(s), default=true |
 | status      | boolean  | optional     | Forward the node \$status publication, default=true |
 | value       | boolean  | optional     | Forward the output \$value publication(s), default=true |
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher/\$node of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
 | timestamp   | string    | **required** | Time the record is created |
 
 
@@ -1068,9 +1076,9 @@ Message structure:
 
 To remove a forward, use the following command:
 
- **\{zone}/\$bridge/\{bridgeId}/\$set/node/remove**
- **\{zone}/\$bridge/\{bridgeId}/\$set/input/remove**
- **\{zone}/\$bridge/\{bridgeId}/\$set/output/remove**
+* **\{zone}/\$bridge/\{bridgeId}/remove/node/\$set**
+* **\{zone}/\$bridge/\{bridgeId}/remove/input/\$set**
+* **\{zone}/\$bridge/\{bridgeId}/remove/output/\$set**
 
 
 The payload is a JSON document containing a message and signature field.
@@ -1081,7 +1089,7 @@ Message structure:
 |:----------- |:-------- |:-----------  |:----------- |
 | address     | string   | **required** | Address of the publication |
 | remove      | string   | **required** | The node, input or output address to remove. |
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher/\$node of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 
