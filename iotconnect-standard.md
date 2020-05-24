@@ -1106,8 +1106,8 @@ Nodes represent hardware or software services. The node types standardizes on th
 | Key              | Value Description |
 |:-------------    |:------------      |
 | alarm            | Node is an alarm emitter |
-| adapter          | Software adapter, eg virtual device |
-| avcontrol        | Audio/video controller, eg remote control |
+| avControl        | Audio/video controller, eg remote control |
+| avReceiver       | Audio/video smart radio/receiver/amp (eg, denon) |
 | beacon           | Location beacon|
 | button           | Device with one or more buttons |
 | camera           | Web or traffic camera |
@@ -1118,54 +1118,74 @@ Nodes represent hardware or software services. The node types standardizes on th
 | gateway          | Gateway for other nodes (onewire, zwave, etc) |
 | gps              | GPS location receiver |
 | keypad           | Entry key pad |
-| lightbulb        | Light bulb or LED light, eg philips hue |
 | lightswitch      | Light switch |
 | lock             | Electronic door lock |
 | multisensor      | NodDevicee with multiple sensors |
-| networkrouter    | Network router |
-| networkswitch    | Network switch |
-| onoffswitch      | General purpose on/off switch |
-| powermeter       | Power or KW meter |
-| repeater         | Zwave or other signal repeater |
-| receiver         | A (not so) smart radio/receiver/amp (eg, denon) |
-| scale            | Physical weight scale |
+| publisher        | Information publisher service  |
+| netRepeater      | Zwave or other network repeater |
+| netRouter        | Network router |
+| netSwitch        | Network switch |
+| netWifiAP        | Network wifi access point |
+| onOffSwitch      | General purpose on/off switch |
+| powerMeter       | Power or KW meter |
 | sensor           | Device with one sensor. See also multisensor. |
+| smartlight       | Smart light, eg philips hue |
 | tv               | A (not so) smart TV |
 | unknown          | Unknown device or service |
 | wallpaper        | Wallpaper montage of multiple images |
-| wap              | Wireless access point |
-| watervalve       | Water valve control unit |
-| weatherstation   | Weather station with multiple sensors and controls |
+| waterValve       | Water valve control unit |
+| weatherService   | Service providing current and forecasted weather |
+| weatherStation   | Weather station with multiple sensors and controls |
+| weighScale       | Electronic weigh scale |
 
 # Appendix C: Predefined Node Attributes
 
-Node attributes provide a description of the device or service including its status. These are read-only and usually hard coded into the device or service. 
+Node attributes provide a description of the device or service including its status. If these 
+attributes are configurable they are included in the Node Config section.
 
 | Key              | Value Description |
-|:-------------    |:------------      |
-| version          | Publishers include the version of the standard. Eg v1.0 |
-| firmware         | Firmware identifier or version |
-| localip          | IP address of the node, for nodes that are publishers themselves |
-| location         | String with "latitude, longitude" of device location  |
+|:---------------  |:----------------- |
+| address          | Node internal address if applicable. Can be used as the node ID |
+| alias            | Configured node alias. Used as nodeID of all inputs and outputs |
+| color            | color in hex notation |
+| description      | device description |
+| disabled         | device or sensor is disabled |
+| filename         | filename to write images or other values |
+| gatewayAddress   | the node gateway address |
+| hostname         | network device hostname |
+| iotcVersion      | Publishers include the version of the IotConnect standard. Eg v1.0 |
+| localIP          | IP address of the node, for nodes that are publishers themselves |
+| latlon           | String with "{latitude}, {longitude}" of device location  |
+| locationName     | Name of a location |
 | mac              | Node MAC address for nodes that have an IP interface |
-| make             | Node make or manufacturer |
-| model            | Node model |
-| type             | Type of node. Eg, multisensor, binary switch, See the Node Types list for predefined values |
+| manufacturer     | Device manufacturer |
+| max              | maximum value of sensor or config |
+| min              | minimum value of sensor or config |
+| model            | Device model |
+| name             | name of device, sensor |
+| netmask          | IP network mask |
+| password         | password to connect. Value is not published |
+| pollInterval     | polling interval in seconds |
+| powerSource      | battery, usb, mains |
+| product          | device product or model name |
+| publicKey        | public key for encrypting sensitive configuration settings |
+| softwareVersion  | Software/Firmware identifier or version |
+| subnet           | IP subnets configuration |
 
-Node status attributes
+Node status attributes. These convey the current state of the node and are read-only
 
 | Key           | Value Description |
 |:------------  |:------------      |
-| errors        | nr of errors reported on this device |
+| errorCount    | nr of errors reported on this device |
 | health        | health status of the device 0-100% |
-| lasterror     | most recent error message |
-| lastseen      | ISO time the device was last seen |
-| latency       | duration connect to sensor in milliseconds |
-| neighborcount | mesh network nr of neighbors |
-| neighbors     | mesh network device neighbors ID list [id,id,...] |
-| received      | Nr of messages received from device |
-| sent          | Nr of messages send to device |
-| runstate      | Node runtime status, see the status attributes below |
+| lastError     | most recent error message |
+| lastSeen      | ISO time the device was last seen |
+| latencyMSec   | duration connect to sensor in milliseconds |
+| neighborCount | mesh network nr of neighbors |
+| neighborIDs   | mesh network device neighbors ID list [id,id,...] |
+| rxCount       | Nr of messages received from device |
+| txCount       | Nr of messages send to device |
+| runState      | Node runtime state. See the runstate attributes below |
 
 Node 'runstate' attribute values
 | Key           | Value Description |
@@ -1174,22 +1194,22 @@ Node 'runstate' attribute values
 | disconnected  | Node has cleanly disconnected |
 | failed        | Node failed to start |
 | initializing  | Node is initializing |
-| lost          | Node connection unexpectedly lost |
 | ready         | Node is ready for use |
 | sleeping      | Node has gone into sleep mode, often a battery powered device |
 
 
 # Appendix D: Predefined Configuration Names
 
-Standard configuration names
+Standard configuration attribute names
 
 | Name          | Value Description |
 |:------------- |:------------      |
-| ip4           | Device static IP-4 address
-| ip6           | Device static IP-6 address
-| location      | Device location name
-| name          | Device friendly name
-| netmask       | Network netmask
+| ip4           | Device static IP-4 address |
+| ip6           | Device static IP-6 address |
+| locationName  | Device location name |
+| loginName     | login name |
+| name          | Device friendly name |
+| netmask       | Network netmask |
 
 
 # Appendix E: Input and Output Types
