@@ -1083,7 +1083,7 @@ The datatype attribute in input and output discovery messages describe what valu
 
 | Datatype         | Description |
 |:-------------    |:------------      |
-| bool             | value is boolean converted to text: True, False  |
+| bool             | value is boolean converted to text: "true", "false" (case insensitive)  |
 | json             | value is a json type with multiple fields, converted to JSON (*)|
 | enum             | value is one of the strings provided in the enum attributes of the discovery message|
 | float            | value is a floating point number converted to text |
