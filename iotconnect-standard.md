@@ -20,13 +20,13 @@ This standard defines the messages for information exchange.
 
 ## Discovery
 
-Discovery of connected IoT devices often depends on the technology used. There is no standard that describes what and how discovery information is made available to consumers independent of their implementation. 
+Discovery of connected IoT devices often depends on the technology used. There is no easy to use standard that describes what and how discovery information is made available to consumers independent of their implementation. 
 
 Application developers often implement solutions specific to their application and the devices that are supported. To facilitate information exchange it must be possible to discover the information that is available independent of the technology used.
 
 This standard defines the process and messaging for discovery of devices and services without the need for a central resource directory. 
 
-Note. The IETF draft "CoRE Resource Directory (draft-ietf-core-resource-directory-20) takes the approach where a centralized service provides a directory of resources. This approach works fine but does not fit within the concept of this standard for several reasons: Mainly it requires and additional direct connection between client and directory which adds an additional protocol with its own encoding. This standard is based on only requiring connections between client and message broker, keeping the attack footprint to a minimum. The protocol is JSON based for all messages. Second, it does not support sharing of information between zones. Last, it does not support the concept of last will and testament when a publisher unexpectedly disconnects from the network. Like most things it is possible to make it work but it is not the best fitting solution.
+Note. The IETF draft "CoRE Resource Directory (draft-ietf-core-resource-directory-20) takes the approach where a centralized service provides a directory of resources. This approach works fine but does not fit within the concept of this standard for several reasons: Mainly it requires and additional direct connection between client and directory which adds an additional protocol with its own encoding. This standard is based on only requiring connections between client and message broker, keeping the attack footprint to a minimum. The protocol is JSON based for all messages. Second, it does not support sharing of information between domains. Last, it does not support the concept of last will and testament when a publisher unexpectedly disconnects from the network. Like most things it is possible to make it work but it is not the best fitting solution.
 
 ## Configuration
 
@@ -62,26 +62,23 @@ Security is a major concern with IoT devices. Problems exist in several areas:
 | Terminology   | Description |
 |:-----------   |:------------|
 | Account       | The account used to connect a publisher to an message bus |
-| Address       | Address of the node consisting of zone, publisher and node identifier. Optionally it can include the input or output type and instance.|
+| Address       | Address of the node consisting of domain, publisher and node identifier. Optionally it can include the input or output type and instance.|
 | Authentication| Method used to identify the publisher and subscriber with the message bus |
-| Bridge        | The service that publishes subscribed information into a different zone. |
-| Configuration | Configuration of node attributes |
 | Data          | The term 'data' is used for raw data collected before it is published. Once it is published it is considered information.|
+| DBM           | Domain Bridge Manager service that creates bridges with other domains |
 | Discovery     | Description of nodes, their inputs and outputs|
+| DSS           | IoT Domain Security Service. This service manages keys and certificates of IoT domain members and guards for invalid publishers |
 | Information   | Anything that is published by a producer. This can be sensor data, images, discovery, etc|
-| JWS           | JSON Web Signature |
+| IoT Domain    | An area in which information is shared between members |
+| JWS           | JSON Web Signature, used to sign messages |
 | Message Bus   | A publish and subscribe capable transport for publication of information. Information is published by a node onto a message bus. Consumers subscribe to information they are interested in use the information address. |
-| Node          | A node is a device or service that provides information and accepts control input. Information from this node can be published by the node itself or published by a (publisher) service that knows how to access the node. |
-| Node Input    | Input to control the node, for example a switch.|
+| Node          | An IoT node is a device or service that provides information and accepts control input. Information from this node can be published by the node itself or published by a (publisher) service that knows how to access the node. |
+| Node Input    | Input to control an IoT node, for example a switch.|
 | Node Output   | Node Information is published using outputs. For example, the current temperature.|
 | Publisher     | A service that is responsible for publishing node information on the message bus and handle configuration updates and control inputs. Publishers are nodes. Publishers sign their publications to provide source verification.|
 | Retainment    | A feature of a message bus that remembers that last published message. Not all message busses support retainment. It is used in publishing the values and discovery messages so new clients receive an instant update of the latest information |
 | Signature     | A JWS message signature for verification the message hasn't been tampered with|
 | Subscriber    | Consumer of information that uses node address to subscribe to information from that node.|
-| ZBM           | Zone Bridge Manager. Manages bridges to share information with other zones.
-| ZCAS          | Zone Certificate Authority Service. This service manages keys and certificates of zone members |
-| ZSM           | Zone Security Monitor. Monitors publications in a zone and watches for intrusions.|
-| Zone          | An area in which information is shared between members of a zone. |
 
 
 # Versioning
@@ -94,9 +91,9 @@ A major version upgrade of this standard is not required to be backwards compati
 
 Publishers include their version of the standard when publishing their node. See 'discovery' for more information.
 
-# Technology Agnostic
+# Implementation Agnostic
 
-This standard is technology agnostic. It is a standard that describes the information format and exchange for discovery, configuration, inputs and outputs, irrespective of the technology used to implement it. Use of different technologies will actually serve to further improve interoperability with other information sources.
+This standard is implementation agnostic. It is a standard that describes the information format and exchange for discovery, configuration, inputs and outputs, irrespective of the technology used to implement it. Use of different technologies will actually serve to further improve interoperability with other information sources.
 
 A reference implementation of a publisher is provided for the golang and python languages using the MQTT service bus.
 
@@ -106,31 +103,33 @@ A reference implementation of a publisher is provided for the golang and python 
 ![System Overview](./system-overview.png)
 
 
-## Zone
+## IoT Domain
 
-A zone defines the area in which information is shared amongst its members. A zone can be a home, a street, a city, or a virtual area like an industrial sensor network or even a game world. Each zone has a globally unique identifier, except for the local zone called '\$local'. Local zones cannot share information with other zones.
+An IoT Domain defines a physical or virtual area in which information is shared amongst its members. An IoT domain can be a home, a street, a city, or a virtual area like an industrial sensor network or even a game world. Each domain has a globally unique domain name, except for the local domain called 'local'. Local domains cannot share information with other domains.
 
-A zone has members which are publishers or subscribers (consumers). All members of a zone have access to information published in that zone. The information is not available outside the zone unless intentionally shared. Publication in the zone is limited to members that have the publish permissions. Not surprisingly these are called 'publishers'.
+An IoT domain has members which are publishers or subscribers (consumers). All members have access to information published in that domain. The information is not available outside the domain unless intentionally shared. Publication in the domain is limited to members that have the publish permissions. Not surprisingly these are called 'publishers'.
 
-A zone can be closed or open to consumers. An open zone allows any consumer to subscribe to publications in that zone without providing credentials. A closed zone requires consumers to provide valid credentials to connect to the message bus of that zone. Whether a zone is open or closed is determined by the configuration of the message bus for that zone.
+An IoT Domain can be closed or open to consumers. An open domain allows any consumer to subscribe to publications without providing credentials. A closed domain requires consumers to provide valid credentials to connect to the message bus of that domain. Whether a domain is open or closed is determined by the configuration of the message bus.
 
-A zone has its own topology separate from the underlying TCP/IP network used. It can operate on a local area network or use the internet. The only requirement is that each member can connect to the message bus.
+For internet accessible IoT domains, the IoT domain name can be the same as the domain name of the message bus. The message bus must be configured with a valid certificate just like any other internet service.
+
+IoT domains can also operate on a local area network in which case the do not need a registered domain name.
 
 ## Message Bus
 
-The use of publish/subscribe message bus has a key role in exchange and security of information in a zone. It not only routes all communications for the zone but also secures publishers and consumers by allowing them to reside behind a firewall, isolated from internet access.
+The use of publish/subscribe message bus has a key role in exchange and security of information. It not only routes all messages but also secures publishers and consumers by allowing them to reside behind a firewall, isolated from any other internet access.
 
-A message bus carries only publications for the zone it is intended for. Multi-zone or multi-tenant message busses can be used but each zone must be fully isolated from other zones. Note that a bridge can publish messages from one zone into another. More on this below.
+A message bus carries only publications for the domain it is intended for. Multi-domain or multi-tenant message busses can be used but each domain must be fully isolated from others. Note that a bridge can publish messages from one domain into another. More on this below.
 
-As the network topology is separate from the zone topology, publishers and subscribers in a zone can be on different networks and behind firewalls. This reduces the attack footprint as none of the publishers or subscribers need to be accessible from the internet. The message bus is the only directly exposed part of the system. It is key to make sure the message bus is properly secured and hardened. For more on securing communication see the security section.
+As the network topology is separate from the message bus topology, publishers and subscribers can be on different networks and behind firewalls. This reduces the attack footprint as none of the publishers or subscribers need to be accessible from the internet. The message bus is the only directly exposed part of the system. It is key to make sure the message bus is properly secured and hardened. For more on securing communication see the security section.
 
-The message bus must be configured to require proper credentials of publishers. Open zones can allow subscribers to omit credentials.
+The message bus must be configured to require proper credentials of publishers. Open IoT domains can allow subscribers to omit credentials. Obviously this should only be done in a secured environment.
 
 ### Message Bus Protocols
 
 This standard is agnostic to the message bus implementation and protocol. The minimum requirement is support for publishing and subscribing using addresses. 
 
-It is highly recommended however that publishers implementation support the MQTT transport protocol. Support for additional transports such as AMQP or HTTP with websockets is optional. 
+It is highly recommended that publisher implementations support the MQTT protocol to allow their use on MQTT message busses. Support for additional protocols such as AMQP or HTTP with websockets is optional. 
 
 The reason to choose MQTT as the defacto default is because a common standard is needed for interoperability. MQTT is low overhead, well supported, supports LWT (Last Will & Testament), has QOS, and clients can operate on constrained devices. It is by no means the ideal choice as explained in [this article by Clemens Vasters](https://vasters.com/archive/MQTT-An-Implementers-Perspective.html)
 
@@ -138,95 +137,79 @@ If in future a better protocol becomes the defacto standard, the MQTT protocol w
 
 ### Guaranteed Delivery (or lack thereof)
 
-The use of a simple message bus, like MQTT, brings with it certain limitations, the main one being the lack of guaranteed delivery. The role of the message bus is to deliver a message to subscribers **that are connected**. While this simplifies the implementation, it pushes the problem of guaranteed delivery to the application. It is effectively a lossy transport between publishers and subscribers.
+The use of a simple message bus, like MQTT, brings with it certain limitations, the main one being the lack of guaranteed delivery. The role of the message bus is to deliver a message to subscribers **that are connected**. While this simplifies the implementation, it pushes the problem of guaranteed delivery to the application. It is effectively a lossy transport between publishers and subscribers. 
 
-The standard mitigates this to some extend by supporting a 'history' output that contains recent values. It is possible to catch up to missed messages by checking the history after a reconnect. The penalty is higher bandwidth, and this is only useful in cases of low message rate or high bandwidth capabilities.
+MQTT supports 'retainment' messages where the last value of a publication is retained. When a consumer connects, it receives the most recent message for all addresses it subscribes to. To receive the most recent information subscribers do not have to be connected at the same time as the publishers. Note that not all MQTT implementations support retainment. 
 
-Secondly, MQTT supports 'retainment' messages where the last value of a publication is retained. When a consumer connects, it receives the most recent message for all addresses it subscribes to, bringing it instantly up to date (with potentially gaps). Note that not all MQTT implementations support retainment. 
+This usage of the message bus will do fine in cases where the goal is to get the most recent value. This will work fine if the loss of a occasional output value is not critical. In addition, the use of the history publication can be used to fill in any gaps if needed. It is well suited for monitoring environmental sensors.
 
-This usage of the message bus will do fine in cases where the goal is to get an up to date recent most value. The loss of a occasional output value in this case is not critical. The use of the history publication can be used to fill in any gaps if needed, but this is only effective for low update frequencies. It well suited for monitoring environmental sensors.
-
-In cases of critical messages such as emergency alerts, some kind of handshake or failover mechanism is strongly adviced. In these cases the transport is merely a step in a longer chain. What matters is that the message is guaranteed to be processed. This requires application level support.
-
-Information exchange handshake over the message bus must be applied at the application level. A service that sends out a critical output message will repeat it until it has received an acknowledgement on its input that it has been processed.
+In cases of critical messages, such as emergency alerts, a confirmation or failover mechanism might be needed. To guarantee end-to-end delivery requires application level support. For example, if an alert is send to an input a confirmation can be published to the return address included in the initial alert.
 
 Based on these considerations the use of simple message bus, like MQTT, should be sufficient for most use-cases. 
 
 ### Severely Constrained Clients
 
-For severely constrained devices such as micro-controller, a message bus client might simply be too complicated to implement. While the JSON message format is easy to generate, it is not as easy to parse. In these cases it might be better to use an adapter/publisher as the connection point for these devices that translates between to the native protocol and this standard.
+For severely constrained devices such as micro-controller, a message bus client might simply be too complicated to implement. While the JSON message format is easy to generate, it is not as easy to parse. In these cases a publisher service can be translates between the native protocol and this standard.
 
 ### Severely Constraint Bandwidth
 
-In the IoT space, bandwidth can be quite limited. The use of LTE Cat M1, NB-IoT, or LPWAN LTE restrictrs the bandwidth due to cost of the data plan. For example, some plans are limited to 10MB per month. If a sensor reports every minute then a single message is limited to approx 1KB per message including handshake. This almost certainly requires some form of compression or other optimization. Just establishing a TLS connection can take up this much.
+In the IoT space, bandwidth can be quite limited. The use of LTE Cat M1, NB-IoT, or LPWAN LTE restricts the bandwidth due to cost of the data plan. For example, some plans are limited to 10MB per month. If a sensor reports every minute then a single message is limited to approx 1KB per message including handshake. This almost certainly requires some form of compression or other optimization. Just establishing a TLS connection can take up this much.
 
-The objective of this standard is to support interoperability, not low bandwidth. These are two different concerns that are addressed separately. The use of adapters make it very easy to work with low bandwidth devices using their native protocol.
+The objective of this standard is to support interoperability, not low bandwidth. These are two different concerns that are addressed separately. The use of adapters make it very easy to work with low bandwidth devices using a compressed or native protocol.
 
 ## Nodes
 
-A zone is populated by nodes that produce or consume information. A node can be a hardware device, a service, or a combination of both.
+IoT Nodes are the sources and destination of information through their inputs and outputs. A node can be a hardware device, a service, or a combination of both. A node has inputs and/or outputs through which information passes. A node can have many as inputs and outputs that are connected to the node. Inputs and outputs are part of their node and cannot exist without it. 
 
-Nodes can but do not have to be compatible with this standard. For nodes that are not compatible, so-called 'adapter node' provides interoperability between the node native protocol and this standard. 
-
-Nodes that publish information according to this standard are called **publishers**. They publish their own output information or publish information from incompatible nodes.
-
-A node has inputs and/or outputs through which information passes. A node can have many as inputs and outputs that are connected to the node. Inputs and outputs are part of their node and cannot exist without it. 
+Gateway devices that connect to nodes are nodes themselves. They can have inputs or outputs but this is optional. Their role is to relay information from other nodes. For example, a ZWave USB stick is considered a gateway and connects to ZWave devices through the ZWave mesh network.
 
 ## Publishers
 
-Publishers are nodes that send and receive messages as per this standard. 
+Publishers are the service that connect to the message bus and publish node information. Only publishers are allowed to publish information on the message bus.
 
-Nodes that are not compatible with this standard require an 'adapter' that publishes on its behalf. In this case there are two nodes, the adapter that is the publisher, and the node whose information is being published. If a gateway is involved then there are three or more nodes. The publisher, the gateway node and each of the nodes that is connected to the gateway.
+For example, a ZWave publisher obtains the temperature from a ZWave temperature sensor via a ZWave controller (gateway) and publishes this information on the message bus as an output of the sensor node. 
 
-For example, a ZWave adapter can obtain sensor data from ZWave nodes via a ZWave controller (gateway), and publish information of the ZWave nodes that are connected to this controller. The adapter, the gateway and each zwave device is represented as a node. 
+Publishers must use credentials to connect to a message bus before they can publish. To publish securely, a publisher must also have to join the IoT domain by registering with the domain's Security Service (DSS). More on that later.
 
-Publishers must use credentials to connect to a zone's message bus before they can publish. To publish securely, a publisher must also have to joined the zone through the Zone Certificate Authority Service (ZCAS). More on that later.
+Nodes can also publish information according to this standard directly, in which case they are also a publisher. These devices identify themselves as both a publisher and as a node with inputs and/or outputs. 
 
-Publishers are responsible for:
+Publishers:
 
-1. Publishing output information 
-2. Handling requests to update inputs
+1. Publish their own verified identity
+2. Handle updates to their own security keys and certificates 
 3. Publish node discovery information
-4. Publish input and output discovery information
-5. Update node configuration
-6. Update security keys and certificates 
+4. Publish node input and output discovery information
+5. Publish node output values 
+6. Handling requests to update node inputs
+7. Handle updates to node configurations
 
 These tasks are discussed in more detail in following sections.
 
 ### Addressing
 
-Information is published using an address on the message bus. This address consists of the node address to whom the information relates \{zone}/\{publisherID}/\{nodeID}, an input or output type and instance, and a message type. The input/output type and instance are omitted for message that relate to the node.
+Information is published using an address on the message bus. This address consists of the node address to whom the information relates \{domain}/\{publisherID}/\{nodeID}, an input or output type and instance, and a message type. The input/output type and instance are used to publish input and output information.
 
-Address segments can only contain of alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. 
+Addresses can only contain of alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. All addresses end with a message type indicating the content of the message.
 
 > Address format:
->  **\{zone} / \{publisherId} / \{nodeId} \[ / \{ioType} / \{instance} \] / \{messagetype\}**
+>  **\{domain} / \{publisherId} / \[ \{nodeId} \[ / \{ioType} / \{instance} \] \] / \{messagetype\}**
 
 Where:
-* \{zone} is the zone in which the node information is published
+* \{domain} is the domain in which the node information is published. This can be "local" or an internet domain.
 * \{publisherId} is the ID of the service that publishes the node, input and output information
 * \{nodeId} is the ID of the node that is being published
 * \{ioType} and \{instance} refers to a particular input or output of the node. 
 * \{messageType} indicates the content of the message, be it publishing of discovery or values.
 For message bus systems that do not support the '/' character as address separator, the separator character of the message bus implementation can be used. However, the message itself must contain the original address using the '/' character as the separator to allow for interoperability between different message bus implementations.
 
-**Reserved Publisher IDs:**
-
-Publishers with special roles have a reserved ID and only a single instance.
-
-* \$zcas - zone certificate authority service for assigning security keys and certificates
-* \$bridge - bridge service for bridging messages to other zones
-* \$discovery - discovery service for sending discovery info on request
-
-**Reserved Node IDs:**
-
-Nodes with a special role also have a reserved ID. 
-
-* \$publisher - all publishers have this as their own node id. 
-
 **Reserved message types:**
 
 The standard predefines the following message types.
+
+| Publisher message type | Purpose |
+|:--------     |:--------|
+| \$identity   | Publication of a publisher's identity (domain/publisherId/\$identity)
+
 
 | Node message type | Purpose |
 |:--------     |:--------|
@@ -259,7 +242,7 @@ This standard supports multiple modes of message publication:
 * JWS signed messages as described in RFC 7515.
 * Compact JWS
 
-*  Use of plain JSON is intended for a trusted environment while JWS is used in secured zones. While it is recommended to use only a single publication method in a zone they can be mixed.
+*  Use of plain JSON is intended for a trusted environment while JWS is used in a secured domain. While it is recommended to use only a single publication method, they can be mixed.
 
 See the security section for more details.
 
@@ -273,13 +256,15 @@ The node alias can be set through the node $configure command. Support for node 
 
 ## Subscribers
 
-Anyone with permission to connect to the message bus can subscribe to messages published in the zone. Publishers subscribe as well in order to handle configuration updates and input messages.
+Consumers that are only subscribers do not have to be registed as publishers. They need credentials to access the message bus and can simply subscribe to publisher addresses. To control configuration and inputs however consumers must be registered as a publisher.
 
-Consumers such as user interfaces and services that do not publish, are merely subscribers and do not publish as nodes. Open zones can allow anyone to subscribe without credentials. To control configuration and inputs however, consumers must be a publisher with a valid signature.
+## Domain Security Service - DSS
 
-## Zone Certificate Authority Service - ZCAS
+The Domain Security service issues keys and identity signatures to publishers. 
 
-The Zone Certificate Authority Service issues keys and certificates to publishers that have joined the security zone. Publishers use these keys to create a [digital signature](https://en.wikipedia.org/wiki/Digital_signature) for each message they publish so consumers can verify they are sent by the publisher and haven't been tampered with. The publisher identity is signed by the ZCAS when it joined the zone and verifies that the publisher is who it claims to be. For local zones the ZCAS is the highest authority and is protected by the message bus only allowing that service to publish on its address. For public zones the ZCAS itself includes a certificate for its domain in its identity.
+Publishers use the issued keys to sign messages using JWS (JSON Web Signing). The signature is used to verify that the message is sent by the publisher and hasn't been tampered with. 
+
+The publisher identity itself is signed by the DSS. It is used to verify that the publisher is who it claims to be and can be trusted. For public domains the DSS includes a certificate from an internet CA with its identity so that the DSS identity can be verified.
 
 For more detail, see the security section
 
@@ -296,9 +281,54 @@ Just like publications of the various values, the discovery publications consist
 
 Where supported, discovery messages are published with retainment. When connection to the message bus was lost and is re-established, the discovery messsages are re-published in case the retainment cache was cleared.
 
-When retainment is not available on the message bus, a discovery service can be used for the zone that republishes discovery messages when a request message is received on its input. When subscribers connect to the message bus they send the discovery service a request. The discovery service republishes the discovery messages it received within the last 24 hours, within 1 minute after receiving discovery requests. This is a very simple service that simply republishes what it received. The 1 minute period is intended to prevent a message storm when multiple publishers connect to the bus at the same time.
+When retainment is not available on the message bus, it can be simulated using a discovery service. When subscribers connect to the message bus they send the discovery service a subscription request. The discovery service republishes the most recent discovery messages it received within the last 24 hours 1 minute after receiving discovery requests. This is a very simple service that simply republishes what it received. The 1 minute period is intended to prevent a message storm when multiple publishers connect to the bus at the same time.
 
-In all cases discovery messages are re-published periodically to indicate the publisher is still alive and its nodes are available. The default interval is once a day but can be changed through publisher configuration. Without retainment this is best combined with a discovery service. 
+In all cases discovery messages are re-published periodically by the publisher to indicate it is still alive and its nodes are available. The default interval is once a day but can be changed through publisher configuration. Without retainment this is best combined with a discovery service. 
+
+## Publisher Discovery
+
+Publisher discovery contains the publisher's identity. The identity contains public signing key used to verify the signature of the messages they publish. The process of signing uses JWS as described in the security section. Messages that fail signature verification MUST be discarded. 
+
+The identity also contains a public encryption key used to send encrypted messages to the publisher or one of its nodes. The process of encryption uses JWE as described in the security section.
+
+Publisher discovery:
+
+  >  **\{domain}/\{publisher}/\$identity**
+
+Message structure
+
+| Field           | type | Description |
+|:--------------- |:-------| ------ |
+| address         | string    | **required** | The address of the publication
+| identity        | Identity | Identity record with public identity attributes
+| | certificate     | Optional x509 certificate, base64 encoded. Included with the ZSS service to be able to verify its identity with a 3rd party. |
+| | domain          | IoT domain name as used in the address. "local" or "test" for local domains |
+| | issuerName      | Name of issuer, usually this is "ZSS", The ZSS includes the CA such as LetsEncrypt here. |
+| | location        | Optional location of the publisher, city, province/state, country |
+| | organization    | Organization the publisher belongs to |
+| | publicCryptoKey | Base64 encoded public key for encrypting messages to the publisher | 
+| | publicSigningKey| Base64 encoded public key for verifying publisher signatures |
+| | publisherId     | ID of this publisher
+| | timestamp       | Time the identity was signed |
+| | validUntil      | ISO8601 Date this identity is valid until |
+| signature        | string | base64 encoded signature of the public identity record
+| signer           | string | Name of the signer, either 'zss' or a CA such as Lets Encrypt
+
+## \$lwt: Publisher Last Will & Testament (MQTT)
+
+This message only applies when using a message bus that supports LWT (last will & testament) .
+
+The LWT option lets the message bus publish a message when the publisher connection is lost unexpectedly. A message with status "connected" and "disconnected" is sent by the publisher when connecting or gracefully disconnecting. The status "lost" is set through last will & testament feature and send by the message bus if the publisher unexpectedly disconnects. 
+
+Address:  **\{domain}/\{publisherId}/\$lwt**
+
+Message structure:
+The message structure:
+
+| Field        | Data Type | Required     | Description |
+|:----------   |:--------  |:-----------  |:------------ |
+| address      | string    | **required** | Address of the publication |
+| status       | string    | **required** | LWT status: "connected", "disconnected", "lost"
 
 
 ## Discover Nodes
@@ -307,31 +337,28 @@ Node discovery messages contain a detailed description of the node. It does not 
 
 Node discovery address:
 
-  >  **\{zone}/\{publisher}/\{node}/\$node**
-
-If the node is the publisher itself then the reserved '\$publisher' node identifier *MUST* be used.
-
-  >  **\{zone}/\{publisher}/\$publisher/\$node**
+  >  **\{domain}/\{publisherId}/\{nodeId}/\$node**
 
 Where:
-* {zone} is the zone in which the node lives
-* {publisher} is the ID of the publisher of the information. The publisher Id is unique within its zone
-* {node} is the node that is discovered. This is a device or a service identifier and unique within a publisher. A special ID of “$publisher” is reserved for nodes that are publishes.
-* $node command for node discovery
+* {domain} is the IoT domain in which the node lives
+* {publisherId} is the ID of the publisher of the information. The publisher Id is unique within its domain
+* {nodeId} is the ID of the node that is discovered. This is a device or a service identifier and unique within a publisher. 
+* $node message type for node discovery
 
 Node discovery message structure:
 
 | Field        | Data Type | Required     | Description
 |:-----------  |:--------- |:----------   |:------------
 | address      | string    | **required** | The address of the publication
-| attr         | map       | **required** | Attributes describing the node. Collection of key-value string pairs that describe the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
+| attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
 | config       | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the attributes that are configurable. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
-| nodeId       | string    | **required** | ID of this node
+| nodeId       | string    | **required** | Immutable ID of this node
+| status       | map       | optional     | key-value pairs describing node performance status
 | timestamp    | string    | **required** | Time the record is created |
 
 **Configuration Record**
 
-The configuration record describes a a node, input or output attribute that can be configured. It includes datatype, and various constraints of the attribute to configure:
+The configuration record describes the node attributes that can be configured. It includes datatype, and various constraints of the configuration:
 
 | Field    | Data Type | Required  | Description |
 |:-------- |:--------- |:--------- |:----------- |
@@ -347,9 +374,9 @@ The configuration record describes a a node, input or output attribute that can 
 Example payload for node discovery
 
 ~~~json
-zone-2/openzwave/5/\$node:
+local/openzwave/5/\$node:
 {
-  "address": "zone-2/openzwave/5/$node",
+  "address": "local/openzwave/5/$node",
   
   "attr": {
     "make": "AeoTec",
@@ -366,53 +393,23 @@ zone-2/openzwave/5/\$node:
 }
 ~~~
 
-### Publisher Identity
-
-Publishers have an identity that is used to verify message signatures and encrypt messages to the publisher. The identity itself is signed by the ZCAS and must be verified before accepting messages from this publisher. This identity is provided through the publisher's node attributes.
-
-**Identity Attributes**
-
-The publisher identity attributes are:
-
-| Attribute         | Description    |
-|:----------------- |:-------------- |
-| publicIdentity    | Base64 encoded Identity Record (see below) |
-| identitySignature | Base64 encoded signature of the base64 encoded public identity, signed by the ZCAS. This is used to verify that the provided identity is valid. Only present for publishers that have joined the secured zone. |
-
-The **Identity Record** describes the publisher and contains its public encryption and signing keys. 
-
-| Field           | Description |
-|:--------------- |:-------|
-| certificate     | Optional x509 certificate, base64 encoded. It can be included with the ZCAS service to be able to verify the ZCAS identity with a 3rd party. Regular publishers have no need for this. |
-| domain          | Optional domain name of non local zones |
-| expires         | ISO8601 Date this identity expires |
-| issuerName      | Name of issuer, usually this is ZCAS |
-| location        | Optional location of the publisher, city, province/state, country |
-| organization    | Organization the publisher belongs to |
-| publicCryptoKey | Base64 encoded public key for encrypting messages to the publisher | 
-| publicSigningKey| Base64 encoded public key for verifying publisher signatures |
-| publisherId     | ID of this publisher
-| timestamp       | Time the identity was signed |
-| zone            | The zone this publisher resides in
-
-
 ## Discover Inputs and Outputs
 
-Inputs and outputs discovery are published separately from the node. The discovery of each output and each input is published separately. This facilitates asynchroneous discovery of inputs and outputs and allows control over which outputs are shared with other zones. 
+Inputs and outputs discovery are published separately from the node. The discovery of each output and each input is published separately. This facilitates control over which inputs and outputs are shared with other domains. 
 
 Address of input discovery:
 
-> **\{zone}/\{publisherId}/\{nodeId}/\{inputType}/\{instance}/\$input/**
+> **\{domain}/\{publisherId}/\{nodeId|alias}/\{inputType}/\{instance}/\$input/**
 
 Address of output discovery:
 
-> **\{zone}/\{publisherId}/\{nodeId}/\{outputType}/\{instance}/\$output**
+> **\{domain}/\{publisherId}/\{nodeId|alias}/\{outputType}/\{instance}/\$output**
 
 | Address segment | Description |
 | :-------------- | :---------- |
-| {zone}          | The zone in which the node lives |
+| {domain}        | The IoT domain in which the node lives, or "local" for local domains |
 | {publisherId}   | The service that is publishing the information |
-| {nodeId}        | ID or alias of the node that owns the input or output |
+| {nodeId|alias}  | ID or alias of the node that owns the input or output |
 | {inputType}     | Type identifier of the input. For a list of predefined types see Appendix D |
 | {outputType}    | Type identifier of the output. For a list of predefined types see Appendix D |
 | {instance}      | The instance of the input or output on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning|
@@ -421,7 +418,7 @@ Address of output discovery:
 
 For example, the discovery of a temperature sensor on node '5', published by a service named 'openzwave', is published on address:
 
-  > **$local/openzwave/5/temperature/0/\$output**
+  > **local/openzwave/5/temperature/0/\$output**
 
 The message structure:
 
@@ -444,9 +441,9 @@ The message structure:
 Example payload for output discovery:
 
 ~~~json
-$local/openzwave/5/\$output/temperature/0:
+local/openzwave/5/\$output/temperature/0:
 {
-  "address": "$local/openzwave/5/temperature/0/$output",
+  "address": "local/openzwave/5/temperature/0/$output",
   "datatype": "float",
   "instance": "0",
   "timestamp": "2020-01-20T23:33:44.999PST",
@@ -460,13 +457,13 @@ $local/openzwave/5/\$output/temperature/0:
 Publishers monitor the outputs of their nodes and publish updates to node output values when there is a change. Output values are published using various commands depending on the content, as described in the following paragraphs.
 
 >The general output value address is:
->  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\{$messageType}**
+>  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\{$messageType}**
 
 | Address segment | Description|
 |:--------------- |:-----------|
-| {zone}          | The zone in which publishing takes place |
-| {publisher}     | The service that is publishing the information. The publisher Id is unique within its zone |
-| {node}          | The node that owns the input or output. This is the node identifier |
+| {domain}        | The global IoT domain in which publishing takes place, or "local" |
+| {publisherId}   | ID of the publisher of the information |
+| {nodeId|alias}  | ID or alias of the node that owns the input or output |
 | {type}          | The type of output, for example "temperature". This standard includes a list of output types |
 | {instance}      | The instance of the type on the node |
 | {$messageType}  | Type of output value publication as described in the following paragraphs: $raw, $latest, ...|
@@ -480,13 +477,13 @@ The payload used with the '\$raw' message type is the pure information as text, 
 
 The \$raw publication is the fallback that every publisher *MUST* publish. It is intended for interoperability with highly constrained devices or 3rd party software that do not support JSON parsing. The payload is therefore the straight value.
 
-Address:  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$raw**
+Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$raw**
 
 Payload: Output value, converted to string. There is no message JSON and no signature.
 
 Example:
 ~~~
-zone-1/openzwave/6/temperature/0/\$raw: "20.6"
+local/openzwave/6/temperature/0/\$raw: "20.6"
 ~~~
 
 ## \$latest: Publish Latest Output With Metadata
@@ -495,7 +492,7 @@ The \$latest publication contains the latest known value of the output including
 
 This is the recommended publication publishing updates to single value sensors. See also the \$event publication for multiple values that are related. 
 
-Address:  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$latest**
+Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$latest**
 
 The message structure is as follows:
 
@@ -506,11 +503,11 @@ The message structure is as follows:
 | unit         | string    | optional     | unit of value type, if applicable |
 | value        | string    | **required** | value in string format |
 
-Example of a publication on zone-1/openzwave/6/\$latest/temperature/0:
+Example of a publication on local/openzwave/6/\$latest/temperature/0:
 
 ~~~json
 {
-  "address": "zone-1/openzwave/6/$latest/temperature/0",
+  "address": "local/openzwave/6/temperature/0/$latest",
   "timestamp": "2020-01-16T15:00:01.000PST",
   "unit": "C",
   "value": "20.6",
@@ -521,7 +518,7 @@ Example of a publication on zone-1/openzwave/6/\$latest/temperature/0:
 
 The payload for the '\$forecast' command contains an ordered list of the projected future values along with address information and signature. The forecast is published each time a value changes. 
 
-Address:  **\{zone}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$forecast**
+Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$forecast**
 
 The message structure:
 
@@ -538,9 +535,9 @@ The message structure:
 For example:
 
 ~~~json
-zone-1/openzwave/6/$forecast/temperature/0:
+local/openzwave/6/$forecast/temperature/0:
 {
-  "address" : "zone-1/openzwave/6/temperature/0/$forecast",
+  "address" : "local/openzwave/6/temperature/0/$forecast",
   "duration": "86400",
   "forecast" : [
     {"timestamp": "2020-01-16T16:00:01.000PST", "value" : "20.4" },
@@ -556,7 +553,7 @@ zone-1/openzwave/6/$forecast/temperature/0:
 
 The payload for the '\$history' command contains an ordered list of the recent values. The history is published each time a value changes. The history publication is optional and intended for users that like to view a 24 hour trend. It can also be used to check for missing values in case transport reliability is untrusted. The content is not required to persist between publisher restarts.
 
-Address:  **\{zone}/\{publisher}/\{node}/\{type}/\{instance}/\$history**
+Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$history**
 
 The message structure:
 
@@ -573,9 +570,9 @@ The message structure:
 For example:
 
 ~~~json
-zone-1/openzwave/6/temperature/0/$history:
+local/openzwave/6/temperature/0/$history:
 {
-  "address" : "zone-1/openzwave/6/temperature/0/$history",
+  "address" : "local/openzwave/6/temperature/0/$history",
   "duration": "86400",
   "history" : [
     {"timestamp": "2020-01-16T15:20:01.000PST", "value" : "20.4" },
@@ -592,7 +589,7 @@ The optional \$event publication indicates the publisher provides multiple outpu
 
 The event value can include one, multiple or all node outputs. 
 
-Address:  **\{zone}/\{publisher}/\{node}/\$event**
+Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\$event**
 
 The message structure:
 
@@ -605,9 +602,9 @@ The message structure:
 For Example:
 
 ~~~json
-zone-1/vehicle-1/\$publisher/\$event:
+local/vehicle-1/\{nodeId}/\$event:
 {
-  "address" : "zone-1/vehicle-1/$publisher/$event",
+  "address" : "local/vehicle-1/\{nodeId}/$event",
   "event" : [
     {"speed/0": "30.2" },
     {"heading/0": "165" },
@@ -623,7 +620,7 @@ zone-1/vehicle-1/\$publisher/\$event:
 
 The optional \$batch publication indicates the publisher provides multiple events. This is intended to reduce bandwidth in case for high frequency sampling of multiple values. Consumers must process the events in the provided order, as if they were sent one at a time.
 
-Address:  **\{zone}/\{publisherId}/\{nodeId}/\$batch**
+Address:  **\{domain}/\{publisherId}/\{nodeId}/\$batch**
 
 The message structure:
 
@@ -636,35 +633,18 @@ The message structure:
 | timestamp    | string    | **required** | ISO8601 timestamp this message was created |
 
 
-## \$lwt: Publish Last Will & Testament (MQTT)
-
-This message only applies when using a message bus that supports LWT (last will & testament) .
-
-The LWT option lets the message bus publish a message when the publisher connection is lost unexpectedly. A message with status "connected" and "disconnected" is sent by the publisher when connecting or gracefully disconnecting. The status "lost" is set through last will & testament feature and send by the message bus if the publisher unexpectedly disconnects. 
-
-Address:  **\{zone}/\{publisherId}/\$publisher/\$lwt**
-
-Message structure:
-The message structure:
-
-| Field        | Data Type | Required     | Description |
-|:----------   |:--------  |:-----------  |:------------ |
-| address      | string    | **required** | Address of the publication |
-| status       | string    | **required** | LWT status: "connected", "disconnected", "lost"
-
-
 # Input Commands
 
 Input commands are send by other publishers to provide input to a node. The messages of all input commands contain the address of the sender. 
 
-In secured zones, only publishers that have joined the secure zone and provide a valid signature are allowed to send input commands. Receivers can verify the message signature with the sender's public key, provided with its discovery message. If this verification fails then the input command must be ignored.
+In secured domains, only publishers that have joined the secure domain and provide a valid signature are allowed to send input commands. Receivers can verify the message signature with the sender's public key, provided with its discovery message. If this verification fails then the input command must be ignored.
 
 Additional restrictions can be imposed by limiting updates to specific publishers.
 
 ## \$set: Set Input Value
 Publishers subscribe to receive commands to update the inputs of the node they manage.
 
-Address:  **\{zone}/\{publisher}/\{node}/\{type}/\{instance}/\$set**
+Address:  **\{domain}/\{publisher}/\{node}/\{type}/\{instance}/\$set**
 
 The message structure:
 
@@ -672,16 +652,16 @@ The message structure:
 |:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required** | Address of the publication |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
-| sender       | string    | **required** | Address of the sender node of the message (zone/publisherId/nodeId) |
+| sender       | string    | **required** | Address of the publisher of the message (domain/publisherId) |
 | value        | string    | **required** | The control input value to set |
 
 For Example:
 
 ~~~json
-zone-1/openzwave/6/switch/0/\$set:
+local/openzwave/6/switch/0/\$set:
 {
-  "address" : "zone-1/openzwave/6/switch/0/\$set",
-  "sender": "zone-1/mrbob/$publisher",
+  "address" : "local/openzwave/6/switch/0/\$set",
+  "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
   "value": "true",
 }
@@ -689,9 +669,9 @@ zone-1/openzwave/6/switch/0/\$set:
 
 ## \$create: Create Node
 
-Publishers where users can create and delete nodes subscribe to this command. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera where nodeId is the camera ID.
+Publishers where users can create and delete nodes subscribe to this message type. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera where nodeId is the new camera ID.
 
-Address:  **\{zone}/\{publisherId}/\{nodeId\}/\$create**
+Address:  **\{domain}/\{publisherId}/\{nodeId}/\$create**
 
 The message structure:
 
@@ -699,47 +679,46 @@ The message structure:
 |:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required**  | Address of the publication |
 | configure    | map       | **required**  | key-value pairs for configuration of the node. This is the same content as the config field in the $configure command
-| sender       | string    | **required** | Address of the sender node of the message (zone/publisherId/nodeId) |
+| sender       | string    | **required** | Address of the publisher of the message (domain/publisherId) |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | nodeID       | string    | **required** | ID of the node to create. Must be unique within the publisher. For example the camera name |
 
 For Example, To create a new camera node with the ipcam publisher:
 
 ~~~json
-zone-1/ipcam/$publisher/\$create:
+local/ipcam/Bennet-Bridge/\$create:
 {
-  "address" : "zone-1/ipcam/Kelowna-Bennett/$create",
+  "address" : "local/ipcam/Bennet-Bridge/\$create",
   "configure" : { 
     "url":"https://images.drivebc.ca/bchighwaycam/pub/cameras/149.jpg",
     "name": "Kelowna Bennett bridge",
     },
-  "sender": "zone-1/mrbob/$publisher",
+  "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
-  "nodeID": "Bennet-Bridge",
 }
 ~~~
 
 
 ## \$delete: Delete Node
 
-Publishers that support creation and deletion of nodes, subscribe to this command. For example to delete an ip camera, the ip camera publisher can be told to delete the camera node.
+Publishers that support creation and deletion of nodes, subscribe to this message type. For example to delete an ip camera, the ip camera publisher can be told to delete the camera node.
 
-Address:  **\{zone}/\{publisherId}/{nodeId}/\$delete**
+Address:  **\{domain}/\{publisherId}/\{nodeId}/\$delete**
 
 The message structure:
 
 | Field        | Data Type | Required      | Description
 |:------------ |:--------- |:----------    |:-----------
 | address      | string    | **required**  | Address of the publication |
-| sender       | string    | **required**  | Address of the publisher node of the message |
+| sender       | string    | **required**  | Address of the publisher |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | 
 
 For Example, To delete a previously created camera node:
 
 ~~~json
-zone-1/ipcam/\Kelowna-Bennett/\$delete:
+local/ipcam/Kelowna-Bennet/$delete:
 {
-  "address" : "zone-1/ipcam/Kelowna-Bennet/$delete",
-  "sender": "zone-1/mrbob/$publisher",
+  "address" : "local/ipcam/Kelowna-Bennet/$delete",
+  "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
 }
 ~~~
@@ -748,15 +727,15 @@ zone-1/ipcam/\Kelowna-Bennett/\$delete:
 
 Support for remote configuration of node attributes lets administrators manage devices and services over the message bus. Publishers of node discovery information include the available configurations for the published nodes. These publishers handle the configuration update messages for the nodes they publish. 
 
-In secured zones, the following requirements apply before configuration updates are accepted:
-1. The message must be correctly signed by the sender (this goes for all messages in secured zones)
+In secured domains, the following requirements apply before configuration updates are accepted:
+1. The message must be correctly signed by the sender (this goes for all messages in secured domains)
 2. The message must be encrypted with the receiver's public crypto key (see section on encryption using JWE)
-3. The sender must be a publisher that has joined the secure zone. Eg it must have a valid identity signature issued by the ZCAS.
+3. The sender must be a publisher that has joined the secure domain. Eg it must have a valid identity signature issued by the ZCAS.
 4. The sender must be allowed to update node configuration. 
 
 If one of the above verification steps fail then the message is discarded and the request is logged.
 
-Address:  **\{zone}/\{publisher}/\{node}/\$configure**
+Address:  **\{domain}/\{publisherId}/\{nodeId}/\$configure**
 
 Configuration Message structure:
 
@@ -771,13 +750,13 @@ Configuration Message structure:
 Example payload for node configuration:
 
 ~~~json
-zone1/openzwave/5/\$configure:
+local/openzwave/5/\$configure:
 {
-  "address": "zone1/openzwave/5/$configure",
+  "address": "local/openzwave/5/$configure",
   "configure": {
     "name": "My new name"
   },
-  "sender": "zone1/mrbob/$publisher",
+  "sender": "local/mrbob",
   "timestamp": "2020-01-20T23:33:44.999PST",
 }
 ~~~
@@ -786,7 +765,7 @@ In this example, the publisher mrbob must first have published its node discover
 
 # Signing Messages Using JWS
 
-Messages can be sent unsigned using plain text JSON and signed using flattened or compact JWS JSON serialization. It is still possible to publish plain text JSON messages but these messages MUST be discarded by all publishers that have joined the secured zone.
+Messages can be sent unsigned using plain text JSON and signed using flattened or compact JWS JSON serialization. It is still possible to publish plain text JSON messages but these messages MUST be discarded by all publishers that have joined the secured domain.
 
 ## Plain text JSON - unsigned messages
 
@@ -798,16 +777,17 @@ This mode allows inspection of the data directly on the message bus and is inter
 
 In flattened JWS mode, messages are digitally signed and published using flattened JSON serialization. The message signature guarantees that it hasn't been tampered with. See [RFC7515](https://www.rfc-editor.org/rfc/rfc7515.txt) for details.
 
-The flattened JWS JSON serialization syntax is a JSON message with four fields. The unprotected header field is not used:
+The flattened JWS JSON serialization syntax is a JSON message with three fields. The protected header is used to set claims for the issuer and the subject address:
 
 ```json
 {
   "protected": "<integrity protected header contents>",
-  "header": "<non-integrity protected header contents>",
   "payload": "<base64url encoded payload contents>",
   "signature": "<base64url encoded digital signature of the content>"
 }
 ```
+
+Where "protected" is the base64 encoded protected header, containing the alg claim: {"alg":"ES256"}
 
 for example: 
 ```json
@@ -824,11 +804,9 @@ for example:
 
 In the above example, the protected header, payload and signature are all base64url encoded before publication of the message. 
 
-The protect header is a JWS JSON header describing the signature encryption algorithm, eg {"alg":"es256"}, which is base64 encoded resulting in "eyJhbGciOiJIUzI1NiJ9".
-
-The payload is the base64url encoded message content in JSON or raw format.
-
-The signature is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
+1. The protect header contains the algorithm claim as described in JWS JSON header specification:
+2. The payload is the base64url encoded message content in JSON or raw format.
+3. The signature is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
 
 
 ## Compact JWS JSON Serialization Signing
@@ -881,9 +859,9 @@ If the verification fails, the message content is discarded.
 
 When a publisher has not yet been discovered, its signature cannot be verified as they are from an unknown publisher. When a publisher discovery message is received it contains a public key that will be used for future signature verification. 
 
-In non-secured zones a publisher discovery is accepted when its signature can be verified against the identity in the discovery message. This is akin to believing someone on his word and of limited value unless additional measures are in place.
+In non-secured domains a publisher discovery is accepted when its signature can be verified against the identity in the discovery message. This is akin to believing someone on his word and of limited value unless additional measures are in place.
 
-The purpose of secured zones is to provide a publisher identity verification method, through topic level security or identity verification with a third party. See the ZCAS for more information.
+The purpose of secured domains is to provide a publisher identity verification method, through topic level security or identity verification with a third party. See the ZCAS for more information.
 
 
 # Encrypted Messaging - JWE
@@ -894,192 +872,160 @@ Just like signing, JWE supports compact serialization and JSON serialization
 
 .. todo ..
 
-# Secured Zones
+# Secured IoT Domains
 
 
 ## Introduction
 
-A secured zone is a zone where publications are made by publishers whose identity can be verified. Protection of secured zones consists of rings. Each ring is an independent layer of security. The implementation of one ring MUST NOT assume the implementation of another ring.
+In a secured domain publications are made by publishers whose identity can be verified. Protection of secured domains consists of rings. Each ring is an independent layer of security. The implementation of one ring MUST NOT assume the implementation of another ring.
 
-Below a description of the rings in secured zones. Details on how to implement each ring are out of scope for this standard but examples are documented separately.
+Ring 5 is the environment outside the message bus, eg the internet. This must be treated as hostile. Think of the badlands with predetors roaming freely. Connections to the message bus through this environment MUST be made with TLS and certificate verification enabled to protect against DNS spoofing and man in the middle attacks.
 
-Ring 5 is the environment outside the message bus, eg the internet. This must be treated as completely untrusted. Think of this as the badlands with predetors roaming freely. Connections to the message bus through this environment MUST be made with TLS and certificate verification enabled to protect against DNS spoofing and man in the middle attacks.
-
-Ring 4 protects the LAN, a somewhat safe zone. A message bus that runs on a LAN and is accessible via the internet needs proper firewall configuration. Run in a DMZ separate from the rest of the LAN and, if available, run on its own VLAN to prevent unintended access to the rest of the LAN. 
+Ring 4 is the LAN environment where the message bus resides. This should be considered just as hostile as the internet as any computer on the LAN that is compromised can mount an attack. A message bus that runs on a LAN and is accessible via the internet needs proper firewall configuration and should run in a DMZ separate from the rest of the LAN. If available it runs on its own VLAN to prevent unintended access to the rest of the LAN. 
 
 Ring 3 protects the message bus server connection. The server must require TLS connections. Clients are required to have proper credentials. Security can be further increased with client side certificates, support for certificate revocation and frequent credential rotation. To detect suspicious connections, connections from clients are logged; Geolocation restrictions of IP addresses are applied; IP block lists are applied; Connection frequency restrictions are in place. Monitoring and alerting of suspicious connections are in place. Basically best practices for any server exposed to the internet.
 
-Ring 2 protects the message bus publish and subscription environment. This ring protects against clients subscribing or publishing to topics they are not allowed to. The minimum requirement is to differentiate between clients that subscribe vs clients that can publish. These permissions are granted separately. The approach used MUST be of deny access first and grant access as needed.
+Ring 2 protects the message bus publish and subscription environment. This ring protects against clients subscribing or publishing to topics they are not allowed to. The minimum requirement is to differentiate between clients that subscribe vs clients that can publish. These permissions are granted separately. The default approach used MUST be of deny access first and grant access as needed. 
 
-Further enhancements are to control for each client which topics they are are allowed to publish to and subscribe to. For example, the ZCAS service is the only service allowed to publish on the zone's ZCAS address. Similarly, publishers should be the only clients allowed to publish discovery and outputs on their address. 
+Further enhancements are to control for each client which topics they are are allowed to publish to and subscribe to. For example, the DSS service is the only service allowed to publish on the  DSS address. Similarly, publishers should be the only clients allowed to publish discovery and outputs on their address. 
 
 Ring 1 protects the message publications themselves. Each publication MUST be signed by its publisher and each publisher identity MUST be verified as signed by a trusted third party. 
 
-This standard defines an optional 'ZCAS' service to act as a trusted party and control the message bus configuration. Publishers can also be verified through a CA certificate chain.
+This standard defines the 'DSS', domain security service, to act as a trusted party and control the message bus configuration. 
 
 
-## Joining A Secured Zone - ZCAS
+## Joining A Secured IoT Domain - DSS
 
-The ZCAS - Zone Certificate Authority Service - is a ring 1 service that issues publisher  certificates and rotates publisher keys. In order to join a secure zone a publisher must be registered with the ZCAS as a trusted client.
+The DSS - Domain Security Service - is a ring 1 service that signs publisher identities and issues signing and encryption keys. In order to join a secure domain a publisher must be registered with the DSS as a trusted client.
 
-A publisher joins the zone in order to receive keys and signatures for its identity that can be verified by subscribers. Keys and signature are issued by the ZCAS. 
-
-The process of joining a secured zone:
-1. A publisher generates a temporary public/private key pair on first use
-2. The publisher publishes its node discovery message containing its identity information and public key as described in the node discovery section
-3. The ZCAS receives the discovery message, adds it to the list of unverified publishers and notifies the administrator
+The process of joining a secured domain:
+1. A publisher generates temporary public/private keys for signing and encryption on first use
+2. The publisher publishes its publisher identity message with the temporary public keys
+3. The DSS receives the identity message, adds it to the list of unverified publishers and notifies the administrator
 4. The administator verifies and optionally updates the publisher identity information and marks the publisher as trusted
-5. The ZCAS issues the new signed identity information to the publisher along with signing keys to be used in messaging. This message is encrypted with the ZCAS private key.
-6. The publisher receives updates to its identity and keys, verifies that they came from the ZCAS and persists the information securely. 
-7. The publisher uses the new signing keys for further publications until they are updated by the ZCAS before they expire.
-8. The ZCAS monitors re-issues new identity and signing keys before they expire.
+5. The DSS publishes the new signed identity information to the publisher along with signing keys to be used in further messaging. This message is encrypted with the publisher's temporary encryption key using JWE. The address is \{domain}/\{publisherId}/\$set
+6. The publisher receives the update to its identity and keys, verifies that they came from the DSS, and persists the information securely
+7. The publisher publishes its updated identity for consumers using the new signing keys
+8. The DSS periodically re-issues new identity and signing keys before they expire
 
 **1: Generating a temporary signing keyset**
 
-Initially the publisher creates their own private and public keyset. The public key is included in the public publisher's identity. By default the keyset is a 256 bit elliptic curve key pair, the key type is included in the identity alg parameter. See publisher identity section for more details.
+Initially the publisher creates their own private and public keyset. The public key is included in the public publisher's identity. By default the keyset is a 256 bit elliptic curve key pair for use with JWS. (JSON Web Signing)
 
-**2: Publish the publisher node discovery including the temporary keyset**
+**2: Publish the publisher identity**
 
 **3: Administrator Marks The Publisher As Trusted**
 
-The **ZCAS** is the Zone Certificate Authority Service. Its purpose is to issue keys and identity signatures to publishers that have joined the zone.
+The **DSS** is the Domain Security Service. Its purpose is to issue keys and identity signatures to publishers that have joined the secured domain.
 
-The ZCAS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional identity can be required such as location, contact email, phone, administrator name and address. 
+The DSS needs to be told that the publisher with public key X is indeed the publisher with the ID it claims to have. Optionally additional identity can be required such as location, contact email, phone, administrator name and address. 
 
-The method to establish trust can vary based on the situation. The following method is used in the ZCAS reference implementation. 
+The method to establish trust can vary based on the situation. The following method is used in the DSS reference implementation. 
 
-1. On installation of a new publisher, the administrator notes the publisher ID and the public key generated by that publisher. The publisher publishes its discovery using the temporary key.
+1. On activation of a new publisher, the administrator notes the publisher ID and the public key generated by that publisher. The publisher publishes its discovery using the temporary key.
 
-2. Next, the administrator logs in to the ZCAS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher and the public key match. If there is a match, the administrator informs the ZCAS that the publisher can be trusted. After this step 4 kicks in.
+2. Next, the administrator logs in to the DSS service. The service shows a list of untrusted publishers. The administrator verifies if the publisher public key matches his notes. If there is a match, the administrator informs the DSS that the publisher can be trusted. After this step 4 kicks in.
 
-**4: ZCAS issues new keys and signs identity**
+**4: DSS issues new keys and signs identity**
 
-When a publisher status changes from untrusted to trusted, the ZCAS starts the cycle of key and identity signature renewal as described below.
+When a publisher status changes from untrusted to trusted, the DSS starts the cycle of key and identity signature renewal as described below.
    
-## Renewing Publisher Identity - ZCAS
+## Renewing Publisher Identity - DSS
 
-The publisher identity is provided with node discovery and includes its public signing and encryption keys. 
+A publisher that has joined the secured domain is issued a new identity record that includes signing and encryption keys, and an identity signature signed by the DSS. Consumers of messages from this publisher can verify that the publisher is legit by verifying the identity signature with the DSS public signing key. This check is done by consumers each time a publisher publishes an updated identity.
 
-A publisher that has joined the zone is issued a new identity record that includes signing and encryption keys, and an identity signature signed by the ZCAS. Receives of messages from the publisher can verify that the publisher is legit by verifying the identity signature with the ZCAS public signin key. 
+The identity information has a limited lifespan and is updated periodically by the DSS before the expiry date is reached. By default this is half the lifespan of 48 hours. In low bandwidth situations this might be increased to a week or a month. The expiry check is performed by the DSS when a publisher publishing its own node discovery or periodically by the DSS itself. The publisher must persist the newly issued identity information before using the new keys. 
 
-The identity information has a limited lifespan and is updated periodically by the ZCAS before the expiry date is reached. By default this is half the lifespan of 48 hours. In low bandwidth situations this might be increased to a week or a month. The check is performed by the ZCAS when a publisher publishing its own node discovery or periodically by the ZCAS itself. 
+If the DSS has no record of a new publisher its identity is stored for review by the administrator. The administrator must mark the publisher as trusted before it is invited to join the secured domain. 
 
-Once a publisher uses the newly issued keys and signature, ZCAS marks the old identity information as expired. The publisher must persist the newly issued identity information before using the new keys. 
-
-If the ZCAS has no record of a new publisher its identity is stored for review by the administrator. The administrator must mark the publisher as trusted before it is invited to join the secured zone. 
-
-If a publisher's identity has expired but the zcas has not issued an updated identity, then its messages will be discarded by consumers until the ZCAS has renewed the identity keys. This should be nearly immediate after the publisher publishes its expired identity with its node discovery message. This allows for publishers to be offline for a longer period of time without being dropped from the secure zone. However, once the new identity key is issued the old one is no longer valid. 
+If a publisher's identity has expired but the dss has not issued an updated identity, then its messages will be discarded by consumers until the DSS has renewed the identity keys. This should be nearly immediate after the publisher publishes its expired identity. This allows for publishers to be offline for a longer period of time without having to reregister with the  secured domain. However, once the new identity key is issued the old one is no longer valid. 
 
 
 Example Identity Update Message:
 
 
 ~~~json
-zone1/openzwave/\$publisher/\$configure:
+my.domain.org/openzwave/\$set:
 {
-  "address": "zone1/openzwave/\$publisher/$configure",
-  "configure": {
-    "publicIdentity": "base64 encoded public identity record below",
-    "privateIdentity": "base64 encoded private identity record below",
-    "identitySignature": "base64 encoded signature of the identity record from ZCAS"
-  },
-  "sender": "zone1/zcas/$publisher/$node",
-  "timestamp": "2020-01-20T23:33:44.999PST",
-}
-
-Where the decoded public and private identity records look like:
-
-~~~json
-{
-  "public": {
-    "domain": "myorg.com",
+  "address": "my.domain.org/openzwave/\$set",
+  "public" : {
+    "domain": "my.domain.org",
     "expires":  "2020-01-22T2:33:44.000PST",
-    "issuerName": "ZCAS",
+    "issuerName": "DSS",
     "location":   "my location in BC, Canada",
     "organization": "my organization",
     "publicCryptoKey": "Base64 encoded public key for encrypting messages to the publisher",
     "publicSigningKey": "Base64 encoded public key for verifying publisher signatures",
     "publisherId": "openzwave",
     "timestamp": "2020-01-20T23:33:44.999PST",
-    "zone":  "zone1"
   },
-  "private": {
-    "cryptoPrivateKey": "base64 encoded private encryption key",
-    "signingPrivateKey": "base64 encoded private signing",
-    "zoneKey": "base64 encoded shared zone key"
+  "signature":  "base64encoded ECDSA signature of the DSS",
+  "timestamp": "2020-01-20T23:34:00.000PST",
   }
-}
+
+
 ~~~   
-
-As you would expect, the private identity configuration values are not published in node discovery.
-
 
 **Requirements For Updating A Publisher Identity**
 
-The requirements for updating the identity configuration are: 
+The requirements for a publisher to allow its identity to be updated: 
 
 1. The message must be encrypted with JWE using the publisher's currently public crypto key (all configuration updates must be encrypted)
-2. The message must originate from the ZCAS publisher. Eg the sender address is \{zone}/zcas/\$publisher/\$node and the message must be signed by the ZCAS.
-3. The identity must contian a zone and publisherId that matches that of the publisher. (you cannot assign a publisher an identity of another publisher)
-4. The configuration update must contain fields for both the identity and the identity signature.
-5. The identity signature must be verified with the ZCAS public signing key.
-6. Remote identity updates must be enabled in the publisher.
+2. The message must originate from the DSS publisher. Eg the sender address is \{domain\}/dss and the message must be signed by the DSS.
+3. The message must not be sent with the retained flag
+4. The identity must contain a correct domain and publisherId. (you cannot assign a publisher an identity of another publisher). 
+5. The identity timestamp must be newer than the current identity timestamp
+6. The message timestamp must be more recent than the previous received message of the DSS publisher (messages that are a replay of an old identity are discarded)
+7. The identity signature must be verified with the DSS public signing key.
+8. Remote identity updates must be enabled in the publisher.
 
 
 ## Expiring Identity Keys
 
-By default, identity and crypto keys expire after 30 days. The ZCAS issues new sets of keys and identity signature when 15 days are remaining. These durations can be changed depending on what policy settings.
-Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the zone. 
+By default, identity and crypto keys expire after 30 days. The DSS issues new sets of keys and identity signature when 15 days are remaining. These durations can be changed depending on what policy settings.
+Once the identity has expired, the administrator must again go through the procecss of joining the publisher to the domain. 
+
 
 ## Verifying Publisher Identity
 
-When a consumer receives a publisher discovery message it needs to verify that the publisher is indeed who it claims to be using the identity signed by the ZCAS service.
+When a consumer receives a message from the publisher, it needs to verify that the publisher is indeed who it claims to be using the identity signed by the DSS service. Once this verification succeeds the consumer can assume the identity is valid until it expires or a new identity is received. 
 
-The ZCAS has the reserved publisher ID of '\$zcas'. It publishes its own identity just like any other publisher with its node on address '{zone}/\$zcas/\$publisher/\$node' which is consistent with publishing nodes of any other publisher. The public key of the zcas identity is used to verify the publisher's identity signature.
+The DSS has the reserved publisher ID of '\$dss'. It publishes its own identity just like any other publisher on address '{domain}/\$dss/\$identity'.
 
-## Verifying ZCAS Identity
+## Verifying The DSS Identity
 
-Just like publishers, the ZCAS has an identity with a signature. There are two methods for ensuring that the ZCAS identity is valid:
+Just like publishers, the DSS has an identity with a signature. There are two methods for ensuring that the DSS identity is valid:
 
-1. Message bus permissions. Only the ZCAS has the credentials to publish on the zcas publisher address. 
-2. Global Certificate. The ZCAS is published with a certificate signed by a global CA like Lets Encrypt.
+1. Message bus permissions. Only the DSS has the credentials to publish on the dss publisher address. This is the default in local domains. Restricting access to the DSS publisher address using message bus ACLs is highly recommended.
 
-Restricting access to the zcas publisher address using ACLs is highly recommended. The use of a certificate is considered an extra security measure.
+2. Global Certificate. The DSS is published with a certificate signed by a global CA like Lets Encrypt. Subscribers can verify this certificate with the global CA before trusting the DSS. To facilitate the use of global domains, the domain '\{name}.iotc.zone' is available, where \{name} is a globally unique domain.
 
-When the ZCAS is registered with a globally trusted Certificate Authority it includes its certificate with the publication of its node. Subscribers can verify this certificate with the global CA before trusting the ZCAS, and any other publishers of the zone. To facilitate the use of global zones the domain '{zone}.iotconnect.zone' is available, where zone is globally unique.
+The domain 'local' is reserved for local-only domains. In this case message bus permissions must secure the DSS publications and no certificate is used. 
 
-The zone '$local' is reserved for local-only zones. In this case message bus permissions must secure the ZCAS publications and no certificate is used. ZCAS is considered the highest authority.
+# Sharing Information With Other IoT Domains - Domain Bridge Manager (DBM)
 
-## Security Monitor - Zone Security Monitor (ZSM)
+While it is useful to share information within an IoT domain, it can be even more useful if some of this information is shared with other domains.
 
-The goal of the Zone Security Monitor is to detect invalid publications and alert the administrator.
+This is the task of a Domain Bridge. Domain Bridges are managed by the Domain Bridge Manager (DBM) publisher. This publisher is responsible for creating and deleting bridge nodes. Note that the local domain cannot be bridged. If multiple IoT domains share the same message bus then no bridge is needed as consumers can already subscribe to the domains. This is a simple way to aggregate information from multiple domains.
 
-The ZSM subscribes to published messages and validates that the messages carry a valid signature. If the signature is not valid then the administrator is notified.
+To create a bridge the DBM is given the address and login information of a remote domain message bus. The DBM creates a new bridge node for that domain, which is published in both the local and remote domain. 
 
-# Sharing Information With Other Zones - Zone Bridge Manager (ZBM)
+When a node output is bridged, the bridge instance listens to publications for that output and republishes the message in the remote domain **under its original address**. The signature and content remain unchanged.
 
-While it is useful to share information within a zone, it can be even more useful if some of this information is shared with other zones.
+By default the bridge publishes the DSS identity from its home domain into the remote domain to enable consumers in the remote domain to verify the bridge publications. 
 
-This is the task of a Zone Bridge. Zone Bridges are managed by the Zone Bridge Manager (ZBM) publisher. This service is responsible for creating and deleting bridge nodes. Note that the local zone cannot be bridged. Note that a bridge is only needed if both zones are on separate message busses. If the zones share the same message bus then no bridge is needed as consumers can already subscribe to both zones.
-
-To create a bridge the ZBM is given the address and login information of a remote zone's bridge. The ZBM creates a new bridge node for that zone, which is published in both the local and remote zone. 
-
-When a node output is bridged, the bridge instance listens to publications for that output and republishes the message in the remote zone under its original address. The signature and content remain unchanged.
-
-By default the Zone bridge publishes the ZCAS node discovery from its home zone into the remote zone to enable consumers in the remote zone to verify the bridge node publications. 
-
-Members of a zone can discover remote publishers by subscribing to the  +/+/$publisher/$node address. This discovers the publishers of all available zones. 
+Members of a domain can discover remote publishers by subscribing to the  +/+/\$identity address. This discovers the publisher identities of all available domains. 
 
 
 ## Managing Bridges
 
-Bridges are managed through the ZBM using its web client if available, or through the message bus. Either way is optional and up to the implementation. If managed through the message bus then the  addresses and messages below must be used.
+Bridges are managed through the DBM using its web client if available, or through the message bus. Either way is optional and up to the implementation. If managed through the message bus then the  addresses and messages below must be used.
 
-To create a bridge the ZBM service must be active in a zone. Publish the following command to create a new bridge:
+To create a bridge the DBM service must be active in a domain. Publish the following command to create a new bridge:
 
->  **\{zone}/\$bridge/\{bridgeId}/\$create**
+>  **\{domain}/\$bridge/\{bridgeId}/\$create**
 
-The payload is a signed message with the new bridge node ID. The new bridge has address: {zone}/\$bridge/{bridgeId}
+The payload is a signed message with the new bridge node ID. The new bridge node has address: {domain}/\$bridge/{bridgeId}
 
 Message Content:
 | Field       | type     | required     | Description |
@@ -1092,25 +1038,26 @@ Message Content:
 | password    | string   | **required** | Password to connect with
 | port        | integer  | optional     | port to connect to. Default is determined by protocol
 | protocol    | enum     | optional     | Protocol to use: "MQTT" (default), "REST"
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 To delete a bridge:
->  **\{zone}/\$bridge/\{bridgeId}/\$delete**
+>  **\{domain}/\$bridge/\{bridgeId}/\$delete**
 
 The payload is a signed message:
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
 | address     | string   | **required** | Address of the publication |
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
+A bridge can be deleted from the local or the remote domain.
 
 ## Bridge Configuration
 
-Using the standard node configuration mechanism, the bridge is configured with the zone it is bridging to. 
+Using the standard node configuration mechanism, the bridge node is configured with the domain it is bridging to. 
 
-Bridge configuration can be set on address: {zone}/\$bridge/\{bridgeId}/\$configure:
+Bridge configuration can be set on address: {domain}/\$bridge/\{bridgeId}/\$configure:
 
 Bridges support the following configuration settings:
 
@@ -1122,7 +1069,7 @@ Bridges support the following configuration settings:
 | password     | string       | **required** | Password to connect with
 | port         | integer      | optional     | port to connect to. Default is determined by protocol
 | protocol     | enum         | optional     | Protocol to use: "MQTT" (default), "REST"
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 ## Forward Nodes, Inputs or Outputs
@@ -1130,13 +1077,13 @@ Bridges support the following configuration settings:
 A bridge node has inputs to manage it forwarding a node, specific input or specific output. 
 
 * To forward a node through the bridge, use the following input set command
-> **\{zone}/\$bridge/\{bridgeId}/forward/node/$set**
+> **\{domain}/\$bridge/\{bridgeId}/forward/node/$set**
 
 * To forward an input:  
-> **\{zone}/\$bridge/\{bridgeId}/forward/input/$set**
+> **\{domain}/\$bridge/\{bridgeId}/forward/input/$set**
 
 * To forward an output:  
-> **\{zone}/\$bridge/\{bridgeId}/forward/output/$set**
+> **\{domain}/\$bridge/\{bridgeId}/forward/output/$set**
  
 Message structure:
 
@@ -1151,7 +1098,7 @@ Message structure:
 | history     | boolean  | optional     | Forward the output \$history publication(s), default=true |
 | latest      | boolean  | optional     | Forward the output \$latest publication(s), default=true |
 | value       | boolean  | optional     | Forward the output \$raw publication(s), default=true |
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
 | timestamp   | string    | **required** | Time the record is created |
 
 
@@ -1159,9 +1106,9 @@ Message structure:
 
 To remove a forward, use the following command:
 
-* **\{zone}/\$bridge/\{bridgeId}/remove/node/\$set**
-* **\{zone}/\$bridge/\{bridgeId}/remove/input/\$set**
-* **\{zone}/\$bridge/\{bridgeId}/remove/output/\$set**
+* **\{domain}/\$bridge/\{bridgeId}/remove/node/\$set**
+* **\{domain}/\$bridge/\{bridgeId}/remove/input/\$set**
+* **\{domain}/\$bridge/\{bridgeId}/remove/output/\$set**
 
 
 Message structure:
@@ -1170,7 +1117,7 @@ Message structure:
 |:----------- |:-------- |:-----------  |:----------- |
 | address     | string   | **required** | Address of the publication |
 | remove      | string   | **required** | The node, input or output address to remove. |
-| sender      | string   | **required** | Address of the sender, eg: zone/mrbob/$publisher of the user that configures the bridge. |
+| sender      | string   | **required** | Address of the publisher |
 | timestamp   | string   | **required** | Time the record is created |
 
 
@@ -1218,7 +1165,6 @@ Nodes represent hardware or software services. The node types standardizes on th
 | lightswitch      | Light switch |
 | lock             | Electronic door lock |
 | multisensor      | NodDevicee with multiple sensors |
-| publisher        | Information publisher service  |
 | netRepeater      | Zwave or other network repeater |
 | netRouter        | Network router |
 | netSwitch        | Network switch |
