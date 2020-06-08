@@ -298,9 +298,9 @@ Publisher discovery:
 Message structure
 
 | Field           | type | Description |
-|:--------------- |:-------| ------ |
-| address         | string    | **required** | The address of the publication
-| identity        | Identity | Identity record with public identity attributes
+|:--------------- |:-------  | ------ |
+| address         | string   | **required** | The address of the publication
+| identity          | Identity | Public identity record
 | | certificate     | Optional x509 certificate, base64 encoded. Included with the ZSS service to be able to verify its identity with a 3rd party. |
 | | domain          | IoT domain name as used in the address. "local" or "test" for local domains |
 | | issuerName      | Name of issuer, usually this is "ZSS", The ZSS includes the CA such as LetsEncrypt here. |
@@ -312,7 +312,8 @@ Message structure
 | | timestamp       | Time the identity was signed |
 | | validUntil      | ISO8601 Date this identity is valid until |
 | signature        | string | base64 encoded signature of the public identity record
-| signer           | string | Name of the signer, either 'zss' or a CA such as Lets Encrypt
+| signer           | string | Name of the signer, either 'DSS' or a CA such as Lets Encrypt
+| timestamp        | Time this message was created |
 
 ## \$lwt: Publisher Last Will & Testament (MQTT)
 
@@ -353,6 +354,7 @@ Node discovery message structure:
 | attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
 | config       | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the attributes that are configurable. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
 | nodeId       | string    | **required** | Immutable ID of this node
+| publisherId  | string    | **required** | Publisher managing this node
 | status       | map       | optional     | key-value pairs describing node performance status
 | timestamp    | string    | **required** | Time the record is created |
 
@@ -383,8 +385,9 @@ local/openzwave/5/\$node:
     "type": "multisensor",
     "name": ""
   },
-  "configure": {
-    "name": {
+  "config": {
+    "alias": {
+      "alias": "deck",
       "datatype": "string",
       "description": "Friendly name",
     }, 
@@ -742,7 +745,7 @@ Configuration Message structure:
 | Field        | type     | required     | Description
 |:------------ |:-------- |:------------ |:-----------
 | address      | string   | **required** | Address of the publication |
-| configure    | map      | **required** | key-value pairs for configuration to update { key: value, …}. **Only fields that require change should be included**. Existing fields remain unchanged.
+| attr         | map      | **required** | key-value pairs for attributes to configure { key: value, …}. **Only fields that require change should be included**. Existing fields remain unchanged.
 | sender       | string   | **required** | Address of the sender node of the message |
 | timestamp    | string   | **required** | Time this request was created, in ISO8601 format
 
@@ -753,7 +756,7 @@ Example payload for node configuration:
 local/openzwave/5/\$configure:
 {
   "address": "local/openzwave/5/$configure",
-  "configure": {
+  "attr": {
     "name": "My new name"
   },
   "sender": "local/mrbob",
