@@ -287,9 +287,7 @@ In all cases discovery messages are re-published periodically by the publisher t
 
 ## Publisher Discovery
 
-Publisher discovery contains the publisher's identity. The identity contains public signing key used to verify the signature of the messages they publish. The process of signing uses JWS as described in the security section. Messages that fail signature verification MUST be discarded. 
-
-The identity also contains a public encryption key used to send encrypted messages to the publisher or one of its nodes. The process of encryption uses JWE as described in the security section.
+Publisher discovery contains the publisher's identity. The identity contains public key used to verify the signature of the messages they publish. The process of signing uses JWS as described in the security section. Messages that fail signature verification MUST be discarded. The public key is also used to encrypt input and configuration messages to the publisher. The process of encryption uses JWE as described in the security section.
 
 Publisher discovery:
 
@@ -306,8 +304,7 @@ Message structure
 | | issuerName      | Name of issuer, usually this is "ZSS", The ZSS includes the CA such as LetsEncrypt here. |
 | | location        | Optional location of the publisher, city, province/state, country |
 | | organization    | Organization the publisher belongs to |
-| | publicCryptoKey | Base64 encoded public key for encrypting messages to the publisher | 
-| | publicSigningKey| Base64 encoded public key for verifying publisher signatures |
+| | publicKey       | Base64 encoded public key for verifying publisher signatures and encryption |
 | | publisherId     | ID of this publisher
 | | timestamp       | Time the identity was signed |
 | | validUntil      | ISO8601 Date this identity is valid until |
@@ -371,7 +368,7 @@ The configuration record describes the node attributes that can be configured. I
 | enum     | \[strings] | optional* | List of valid enum values as strings. Required when datatype is enum |
 | max      | float     | optional | Optional maximum value for numeric data |
 | min      | float     | optional | Optional minimum value for numeric data | 
-| secret   | bool      | optional | Optional flag that the configuration value is secret and will be left empty. When a secret configuration is set in \$configure, the value is encrypted with the publisher node public key. |
+| secret   | bool      | optional | Optional flag that the configuration value is secret and its value will not be included in publications. 
 
 Example payload for node discovery
 
@@ -732,7 +729,7 @@ Support for remote configuration of node attributes lets administrators manage d
 
 In secured domains, the following requirements apply before configuration updates are accepted:
 1. The message must be correctly signed by the sender (this goes for all messages in secured domains)
-2. The message must be encrypted with the receiver's public crypto key (see section on encryption using JWE)
+2. The message must be encrypted with the receiver's public key (see section on encryption using JWE)
 3. The sender must be a publisher that has joined the secure domain. Eg it must have a valid identity signature issued by the ZCAS.
 4. The sender must be allowed to update node configuration. 
 
@@ -829,9 +826,7 @@ When combined with the $raw publications it is the smallest publication possible
 
 ## Creating A Signature
 
-The JWS header describes the algorithm used to generate the signature. Options are ECDSA Elliptic Curve, HMAC or RSA encryption, using SHA-256, 384 or 512 hash algorithms. See https://openid.net/specs/draft-jones-json-web-signature-04.html#RFC3275 for details.
-
-The preferred method of signing messages is [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet). Its keys are shorter than RSA, it has not (yet - May 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
+The JWS header describes the algorithm used to generate the signature. This standard requires the use of [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet) for signing and encryption. Its keys are shorter than RSA, it has not (yet - May 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
 
 The steps to create a signature are:
 1. Base64url encode the protected header
@@ -841,10 +836,12 @@ The steps to create a signature are:
 5. Create the signature by encrypting the hash using ECDSA with the publisher's private signing key 
 6. base64url encode the resulting signature and provide it in the 'signature' field.
 
+or better, use a JWS library to generate the signature.
+
 See the example code:
-* golang: https://github.com/hspaay/iotconnect.standard/tree/master/examples/edcsa_text.go
-* python: https://github.com/hspaay/iotconnect.standard/tree/master/examples/example.py
-* javascript: https://github.com/hspaay/iotconnect.standard/tree/master/examples/example.js
+* golang: https://github.com/hspaay/iotc.standard/tree/master/examples/edcsa_text.go
+* python: https://github.com/hspaay/iotc.standard/tree/master/examples/example.py
+* javascript: https://github.com/hspaay/iotc.standard/tree/master/examples/example.js
 
 
 ## Verifying A Message Signature
@@ -869,9 +866,9 @@ The purpose of secured domains is to provide a publisher identity verification m
 
 # Encrypted Messaging - JWE
 
-Messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted using the public crypto key of the intended recipient. To this end the JSON Web Encryption is used.
+Messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted using the public key of the intended recipient. To this end the JSON Web Encryption is used.
 
-Just like signing, JWE supports compact serialization and JSON serialization
+Just like signing, JWE supports compact serialization and JSON serialization using the publisher's public key.
 
 .. todo ..
 
@@ -899,10 +896,10 @@ This standard defines the 'DSS', domain security service, to act as a trusted pa
 
 ## Joining A Secured IoT Domain - DSS
 
-The DSS - Domain Security Service - is a ring 1 service that signs publisher identities and issues signing and encryption keys. In order to join a secure domain a publisher must be registered with the DSS as a trusted client.
+The DSS - Domain Security Service - signs the publisher identities and issues a trusted public/private key pair for signing and encryption. In order to join a secure domain a publisher must be registered with the DSS as a trusted client. 
 
 The process of joining a secured domain:
-1. A publisher generates temporary public/private keys for signing and encryption on first use
+1. A publisher generates temporary public/private key pair for signing and encryption on first use
 2. The publisher publishes its publisher identity message with the temporary public keys
 3. The DSS receives the identity message, adds it to the list of unverified publishers and notifies the administrator
 4. The administator verifies and optionally updates the publisher identity information and marks the publisher as trusted
@@ -935,7 +932,7 @@ When a publisher status changes from untrusted to trusted, the DSS starts the cy
    
 ## Renewing Publisher Identity - DSS
 
-A publisher that has joined the secured domain is issued a new identity record that includes signing and encryption keys, and an identity signature signed by the DSS. Consumers of messages from this publisher can verify that the publisher is legit by verifying the identity signature with the DSS public signing key. This check is done by consumers each time a publisher publishes an updated identity.
+A publisher that has joined the secured domain is issued a new identity record that includes a new public/private key pair, and an identity signature signed by the DSS. Consumers of messages from this publisher can verify that the publisher is legit by verifying the identity signature with the DSS public signing key. This check is done by consumers each time a publisher publishes an updated identity.
 
 The identity information has a limited lifespan and is updated periodically by the DSS before the expiry date is reached. By default this is half the lifespan of 48 hours. In low bandwidth situations this might be increased to a week or a month. The expiry check is performed by the DSS when a publisher publishing its own node discovery or periodically by the DSS itself. The publisher must persist the newly issued identity information before using the new keys. 
 
@@ -957,8 +954,7 @@ my.domain.org/openzwave/\$set:
     "issuerName": "DSS",
     "location":   "my location in BC, Canada",
     "organization": "my organization",
-    "publicCryptoKey": "Base64 encoded public key for encrypting messages to the publisher",
-    "publicSigningKey": "Base64 encoded public key for verifying publisher signatures",
+    "publicKey": "Base64 encoded public key for signature verification and encryption",
     "publisherId": "openzwave",
     "timestamp": "2020-01-20T23:33:44.999PST",
   },
@@ -973,7 +969,7 @@ my.domain.org/openzwave/\$set:
 
 The requirements for a publisher to allow its identity to be updated: 
 
-1. The message must be encrypted with JWE using the publisher's currently public crypto key (all configuration updates must be encrypted)
+1. The message must be encrypted with JWE using the publisher's current public key (all configuration updates must be encrypted)
 2. The message must originate from the DSS publisher. Eg the sender address is \{domain\}/dss and the message must be signed by the DSS.
 3. The message must not be sent with the retained flag
 4. The identity must contain a correct domain and publisherId. (you cannot assign a publisher an identity of another publisher). 
@@ -1214,7 +1210,6 @@ attributes are configurable they are included in the Node Config section.
 | pollInterval     | polling interval in seconds |
 | powerSource      | battery, usb, mains |
 | product          | device product or model name |
-| publicKey        | public key for encrypting sensitive configuration settings |
 | softwareVersion  | Software/Firmware identifier or version |
 | subnet           | IP subnets configuration |
 
