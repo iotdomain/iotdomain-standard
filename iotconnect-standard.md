@@ -309,7 +309,7 @@ Message structure
 | | timestamp       | Time the identity was signed |
 | | validUntil      | ISO8601 Date this identity is valid until |
 | signature        | string | base64 encoded signature of the public identity record
-| signer           | string | Name of the signer, either 'DSS' or a CA such as Lets Encrypt
+| signer           | string | Address or name of the signer, eg 'domain.dss' or a CA such as Lets Encrypt
 | timestamp        | Time this message was created |
 
 ## \$lwt: Publisher Last Will & Testament (MQTT)
@@ -763,9 +763,9 @@ local/openzwave/5/\$configure:
 
 In this example, the publisher mrbob must first have published its node discovery containing the identity attribute signed by the ZCAS before the message is accepted.
 
-# Signing Messages Using JWS
+# Message Signing
 
-Messages can be sent unsigned using plain text JSON and signed using flattened or compact JWS JSON serialization. It is still possible to publish plain text JSON messages but these messages MUST be discarded by all publishers that have joined the secured domain.
+Messages can be sent unsigned using plain text JSON or signed using compact JWS JSON serialization. It is possible to publish plain text JSON messages but these messages MUST be discarded by all publishers that have joined the secured domain.
 
 ## Plain text JSON - unsigned messages
 
@@ -773,45 +773,13 @@ In plain text JSON mode the messages are published as described in this standard
 
 This mode allows inspection of the data directly on the message bus and is interoperable with consumers that understand JSON but don't support signatures. It should however only be used in trusted environments.
 
-## Flattened JWS JSON Serialization Signing
-
-In flattened JWS mode, messages are digitally signed and published using flattened JSON serialization. The message signature guarantees that it hasn't been tampered with. See [RFC7515](https://www.rfc-editor.org/rfc/rfc7515.txt) for details.
-
-The flattened JWS JSON serialization syntax is a JSON message with three fields. The protected header is used to set claims for the issuer and the subject address:
-
-```json
-{
-  "protected": "<integrity protected header contents>",
-  "payload": "<base64url encoded payload contents>",
-  "signature": "<base64url encoded digital signature of the content>"
-}
-```
-
-Where "protected" is the base64 encoded protected header, containing the alg claim: {"alg":"ES256"}
-
-for example: 
-```json
-{
-  "protected": "eyJhbGciOiJIUzI1NiJ9",
-  "payload": "SXTigJlzIGEgZGFuZ2Vyb3VzIGJ1c2luZXNzLCBGcm9kbywg
-      Z29pbmcgb3V0IHlvdXIgZG9vci4gWW91IHN0ZXAgb250byB0aGUgcm9h
-      ZCwgYW5kIGlmIHlvdSBkb24ndCBrZWVwIHlvdXIgZmVldCwgdGhlcmXi
-      gJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9m
-      ZiB0by4",
-  "signature": "bWUSVaxorn7bEF1djytBd0kHv70Ly5pvbomzMWSOr20"
-}
-```
-
-In the above example, the protected header, payload and signature are all base64url encoded before publication of the message. 
-
-1. The protect header contains the algorithm claim as described in JWS JSON header specification:
-2. The payload is the base64url encoded message content in JSON or raw format.
-3. The signature is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
-
-
 ## Compact JWS JSON Serialization Signing
 
-Compact JWS JSON serializations is similar to flattened JSON serialization except that instead of using a JSON object to describe the parts, the parts are simply concatenated and separated by a dot '.'. Eg:
+Compact JWS JSON serializations a message consists of three parts concatenated and separated by a dot '.'. Eg:
+
+Part 1 consists of the base64url encoded protected header. This header contains the algorithm claim as described in JWS JSON header specification
+Part 2 consists of the base64url encoded payload. 
+Part 3 consists of the signature, which is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
 
 > Base64URL(UTF8(protected header)) . Base64URL(payload) . Base64URL(JWS Signature)
 
@@ -822,7 +790,6 @@ For Example:
    cmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4.
    bWUSVaxorn7bEF1djytBd0kHv70Ly5pvbomzMWSOr20"
 
-When combined with the $raw publications it is the smallest publication possible within this spec as the payload is the base64url encoded raw value.
 
 ## Creating A Signature
 
@@ -866,11 +833,12 @@ The purpose of secured domains is to provide a publisher identity verification m
 
 # Encrypted Messaging - JWE
 
-Messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted using the public key of the intended recipient. To this end the JSON Web Encryption is used.
+In secured zones, messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted. To this end the JSON Web Encryption is used with the recipient publisher's public key.
 
-Just like signing, JWE supports compact serialization and JSON serialization using the publisher's public key.
+When encrypting a message, JWE encapsulates the JWS signed message: JWE( JWS(payload, privateKey), publicKey ). 
 
-.. todo ..
+The sender signs its message with its private key and then encrypts it with the recipient's public key.
+
 
 # Secured IoT Domains
 
@@ -941,7 +909,7 @@ If the DSS has no record of a new publisher its identity is stored for review by
 If a publisher's identity has expired but the dss has not issued an updated identity, then its messages will be discarded by consumers until the DSS has renewed the identity keys. This should be nearly immediate after the publisher publishes its expired identity. This allows for publishers to be offline for a longer period of time without having to reregister with the  secured domain. However, once the new identity key is issued the old one is no longer valid. 
 
 
-Example Identity Update Message:
+Example Full Identity Update:
 
 
 ~~~json
@@ -954,12 +922,14 @@ my.domain.org/openzwave/\$set:
     "issuerName": "DSS",
     "location":   "my location in BC, Canada",
     "organization": "my organization",
-    "publicKey": "Base64 encoded public key for signature verification and encryption",
+    "publicKey": "PEM encoded public key for signature verification and encryption",
     "publisherId": "openzwave",
     "timestamp": "2020-01-20T23:33:44.999PST",
   },
+  "signer": "mydomain.org/dss",
   "signature":  "base64encoded ECDSA signature of the DSS",
   "timestamp": "2020-01-20T23:34:00.000PST",
+  "privateKey": "PEM encoded private key",
   }
 
 
