@@ -209,6 +209,7 @@ The standard predefines the following message types.
 | Publisher message type | Purpose |
 |:--------     |:--------|
 | \$identity   | Publication of a publisher's identity (domain/publisherId/\$identity)
+| \$set        | Renew a publisher's identity by the DSS (domain/publisherId/\$set)
 
 
 | Node message type | Purpose |
@@ -287,7 +288,7 @@ In all cases discovery messages are re-published periodically by the publisher t
 
 ## Publisher Discovery
 
-Publisher discovery contains the publisher's identity. The identity contains public key used to verify the signature of the messages they publish. The process of signing uses JWS as described in the security section. Messages that fail signature verification MUST be discarded. The public key is also used to encrypt input and configuration messages to the publisher. The process of encryption uses JWE as described in the security section.
+Publisher discovery messages contain the publisher's public identity. The identity includes the public key used to verify the signature of the messages published. The process of signing uses JWS as described in the security section. Messages that fail signature verification MUST be discarded. The public key is also used to encrypt input and configuration messages to this publisher. The process of encryption uses JWE as described in the security section.
 
 Publisher discovery:
 
@@ -298,13 +299,13 @@ Message structure
 | Field           | type | Description |
 |:--------------- |:-------  | ------ |
 | address         | string   | **required** | The address of the publication
-| identity          | Identity | Public identity record
-| | certificate     | Optional x509 certificate, base64 encoded. Included with the ZSS service to be able to verify its identity with a 3rd party. |
+| public          | Identity | Public identity record
+| | certificate     | Optional x509 certificate, base64 encoded. Included with the DSS identity to be able to verify it with a 3rd party. |
 | | domain          | IoT domain name as used in the address. "local" or "test" for local domains |
-| | issuerName      | Name of issuer, usually this is "ZSS", The ZSS includes the CA such as LetsEncrypt here. |
+| | issuerName      | Name of issuer, usually this is "DSS" or the CA name. |
 | | location        | Optional location of the publisher, city, province/state, country |
 | | organization    | Organization the publisher belongs to |
-| | publicKey       | Base64 encoded public key for verifying publisher signatures and encryption |
+| | publicKey       | PEM encoded public key for verifying publisher signatures and encrypting messages to this publisher |
 | | publisherId     | ID of this publisher
 | | timestamp       | Time the identity was signed |
 | | validUntil      | ISO8601 Date this identity is valid until |
@@ -635,9 +636,9 @@ The message structure:
 
 # Input Commands
 
-Input commands are send by other publishers to provide input to a node. The messages of all input commands contain the address of the sender. 
+Input commands are send by other publishers to control inputs of a node. The messages of all input commands contain the address of the sender to be able to verify the signature.
 
-In secured domains, only publishers that have joined the secure domain and provide a valid signature are allowed to send input commands. Receivers can verify the message signature with the sender's public key, provided with its discovery message. If this verification fails then the input command must be ignored.
+In secured domains, input commands are only accepted if the message is encrypted, properly signed, and is sent by publishers whose identity is signed by the DSS.
 
 Additional restrictions can be imposed by limiting updates to specific publishers.
 
@@ -725,13 +726,14 @@ local/ipcam/Kelowna-Bennet/$delete:
 
 # Configuring A Node  
 
-Support for remote configuration of node attributes lets administrators manage devices and services over the message bus. Publishers of node discovery information include the available configurations for the published nodes. These publishers handle the configuration update messages for the nodes they publish. 
+Support for remote configuration of node attributes enables administrators manage devices and services over the message bus. Publishers of node discovery information include the available configurations for the published nodes. These publishers handle the configuration update messages for the nodes they publish. 
 
-In secured domains, the following requirements apply before configuration updates are accepted:
-1. The message must be correctly signed by the sender (this goes for all messages in secured domains)
-2. The message must be encrypted with the receiver's public key (see section on encryption using JWE)
-3. The sender must be a publisher that has joined the secure domain. Eg it must have a valid identity signature issued by the ZCAS.
-4. The sender must be allowed to update node configuration. 
+
+Input commands are send by other publishers to control inputs of a node. The messages of all input commands contain the address of the sender to be able to verify the signature.
+
+In secured domains the message must be correctly signed by the sender, be encrypted with the receiver's public key (see section on encryption using JWE), and the sender must have a valid identity signature issued by the DSS.
+
+Additional restrictions can apply to only allow certain senders to update node configurations.
 
 If one of the above verification steps fail then the message is discarded and the request is logged.
 
@@ -765,21 +767,21 @@ In this example, the publisher mrbob must first have published its node discover
 
 # Message Signing
 
-Messages can be sent unsigned using plain text JSON or signed using compact JWS JSON serialization. It is possible to publish plain text JSON messages but these messages MUST be discarded by all publishers that have joined the secured domain.
+By default all messages are signed using JWS and compact serialization, except for local and test domains where plaintext JSON can be sent. In normal operations, unsigned messages MUST be discarded. In secured domains, the publisher identity itself must be signed by the DSS. 
 
 ## Plain text JSON - unsigned messages
 
-In plain text JSON mode the messages are published as described in this standard and are unsigned. Messages are always in plain text (UTF 8) JSON except for the $raw publication.
+In local and test domains messages can be published in JSON serialized UTF-8 plain text, except for the $raw publication whose content is not JSON serialized.
 
 This mode allows inspection of the data directly on the message bus and is interoperable with consumers that understand JSON but don't support signatures. It should however only be used in trusted environments.
 
 ## Compact JWS JSON Serialization Signing
 
-Compact JWS JSON serializations a message consists of three parts concatenated and separated by a dot '.'. Eg:
+Compact JWS JSON serialization, serializes a message consists of three parts concatenated and separated by a dot '.'. Eg:
 
 Part 1 consists of the base64url encoded protected header. This header contains the algorithm claim as described in JWS JSON header specification
 Part 2 consists of the base64url encoded payload. 
-Part 3 consists of the signature, which is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
+Part 3 consists of the JWS signature, which is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
 
 > Base64URL(UTF8(protected header)) . Base64URL(payload) . Base64URL(JWS Signature)
 
@@ -790,18 +792,9 @@ For Example:
    cmXigJlzIG5vIGtub3dpbmcgd2hlcmUgeW91IG1pZ2h0IGJlIHN3ZXB0IG9mZiB0by4.
    bWUSVaxorn7bEF1djytBd0kHv70Ly5pvbomzMWSOr20"
 
+The signature is generated using [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet). Its keys are shorter than RSA, it has not (yet - May 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
 
-## Creating A Signature
-
-The JWS header describes the algorithm used to generate the signature. This standard requires the use of [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet) for signing and encryption. Its keys are shorter than RSA, it has not (yet - May 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
-
-The steps to create a signature are:
-1. Base64url encode the protected header
-2. Base64url encode the payload
-3. Combine 1) and 2) separated with a dot
-4. Create a hash of 3) using SHA256. 
-5. Create the signature by encrypting the hash using ECDSA with the publisher's private signing key 
-6. base64url encode the resulting signature and provide it in the 'signature' field.
+The signature is created by creating the SHA256 hash of \<header>.\<payload>, then encrypting the hash using ECDSA using the publisher's private key, and last to base64url encode the result.
 
 or better, use a JWS library to generate the signature.
 
@@ -811,33 +804,28 @@ See the example code:
 * javascript: https://github.com/hspaay/iotc.standard/tree/master/examples/example.js
 
 
-## Verifying A Message Signature
 
-Consumers verify a signature by:
+The signature is verified in reverse order by:
 1. Base64url decode the protected header, payload and the signature
-2. Determine the publisher of the message from the publication address. 
-3. Determine the public signing key of the publisher from its discovery information.
-4. Determine the hash of the encoded header and payload concatenated with a dot
-5. ECDSA verify the signature using the hash and public key
+2. Determine the public signing key of the publisher from its discovery information.
+3. Generate the hash of the encoded header and payload concatenated with a dot, just as done in signing.
+4. ECDSA verify the signature using the hash and public key
 
 See the examples for more detail.
 
 If the verification fails, the message content is discarded.
 
-When a publisher has not yet been discovered, its signature cannot be verified as they are from an unknown publisher. When a publisher discovery message is received it contains a public key that will be used for future signature verification. 
+When a publisher publishes its own public identity, the verification process must use the signature contained in the identity, as it could have been renewed. 
 
-In non-secured domains a publisher discovery is accepted when its signature can be verified against the identity in the discovery message. This is akin to believing someone on his word and of limited value unless additional measures are in place.
-
-The purpose of secured domains is to provide a publisher identity verification method, through topic level security or identity verification with a third party. See the ZCAS for more information.
+To close the gaping security hole this creates, the identity MUST be correctly signed by the DSS in secured domains. In non-secured domains the message bus must be configured with ACL to only allow the publisher to publish on its identity address.
 
 
 # Encrypted Messaging - JWE
 
-In secured zones, messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted. To this end the JSON Web Encryption is used with the recipient publisher's public key.
+In secured zones, messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted. The sender signs the message with its private key and then encrypt it with the recipient's public key.
 
-When encrypting a message, JWE encapsulates the JWS signed message: JWE( JWS(payload, privateKey), publicKey ). 
+To this end the JSON Web Encryption is used. JWE encapsulates the JWS signed message: JWE( JWS(payload, privateKey), publicKey ) and uses compact serialization before publishing. 
 
-The sender signs its message with its private key and then encrypts it with the recipient's public key.
 
 
 # Secured IoT Domains
@@ -900,7 +888,11 @@ When a publisher status changes from untrusted to trusted, the DSS starts the cy
    
 ## Renewing Publisher Identity - DSS
 
-A publisher that has joined the secured domain is issued a new identity record that includes a new public/private key pair, and an identity signature signed by the DSS. Consumers of messages from this publisher can verify that the publisher is legit by verifying the identity signature with the DSS public signing key. This check is done by consumers each time a publisher publishes an updated identity.
+Note this only applies for domains that are secured using a Domain Security Service - DSS, that renews publisher's identity.
+
+A publisher that has joined the secured domain is issued a new full identity record that includes a new public/private key pair, and an identity signature signed by the DSS. The publisher will publish its updated public identity containing a new public key.
+
+Receivers of a publisher identity update must verify that the new public identity is legit before accepting it. This is done by ECDSA verification of the public identity, its signature and the DSS public signing key. If it all matches the new publisher can be trusted.
 
 The identity information has a limited lifespan and is updated periodically by the DSS before the expiry date is reached. By default this is half the lifespan of 48 hours. In low bandwidth situations this might be increased to a week or a month. The expiry check is performed by the DSS when a publisher publishing its own node discovery or periodically by the DSS itself. The publisher must persist the newly issued identity information before using the new keys. 
 
@@ -909,7 +901,9 @@ If the DSS has no record of a new publisher its identity is stored for review by
 If a publisher's identity has expired but the dss has not issued an updated identity, then its messages will be discarded by consumers until the DSS has renewed the identity keys. This should be nearly immediate after the publisher publishes its expired identity. This allows for publishers to be offline for a longer period of time without having to reregister with the  secured domain. However, once the new identity key is issued the old one is no longer valid. 
 
 
-Example Full Identity Update:
+The update message of a full identity record consists of the publisher identity message with the following additions:
+* a sender field that must contain the DSS identity address
+* a privateKey field that contains a PEM encoded private key for this publisher
 
 
 ~~~json
@@ -926,8 +920,8 @@ my.domain.org/openzwave/\$set:
     "publisherId": "openzwave",
     "timestamp": "2020-01-20T23:33:44.999PST",
   },
-  "signer": "mydomain.org/dss",
-  "signature":  "base64encoded ECDSA signature of the DSS",
+  "sender": "mydomain.org/dss",
+  "signature":  "base64encoded ECDSA signature of the sender",
   "timestamp": "2020-01-20T23:34:00.000PST",
   "privateKey": "PEM encoded private key",
   }
