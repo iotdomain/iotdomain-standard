@@ -6,7 +6,7 @@
 
 ## Status
 
-This standard is currently (Feb 2020) draft version 0. The standard is currently being validated with use-cases and a reference implementation.
+This standard is currently (June 2020) a draft version. The standard is currently being validated with use-cases and a reference implementation.
 
 The standard can be found here:  [IoTConnect Standard](./iotconnect-standard.md)
 
