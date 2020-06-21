@@ -350,7 +350,7 @@ Node discovery message structure:
 |:-----------  |:--------- |:----------   |:------------
 | address      | string    | **required** | The address of the publication
 | attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
-| config       | List of **Configuration Records** | optional | Node configuration, if any exist. Set of configuration objects that describe the attributes that are configurable. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
+| config       | map of **Configuration Records** | optional | Map of attribute configuration by attribute name. Each record describes the configuration constraints. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
 | nodeId       | string    | **required** | Immutable ID of this node
 | publisherId  | string    | **required** | Publisher managing this node
 | status       | map       | optional     | key-value pairs describing node performance status
@@ -358,15 +358,14 @@ Node discovery message structure:
 
 **Configuration Record**
 
-The configuration record describes the node attributes that can be configured. It includes datatype, and various constraints of the configuration:
+The attribute configuration record describes the configuration constraints of the attribute. It includes dataType, and various constraints of the configuration:
 
 | Field    | Data Type | Required  | Description |
 |:-------- |:--------- |:--------- |:----------- |
-| name     | string    | **required** | Name of the attribute as used in the attr section. See also Appendix C: Predefined Configuration Names |
-| datatype | enum      | optional| Type of value. Used to determine the editor to use for the value. One of: bool, enum, float, int, string. Default is ‘string’ |
+| dataType | enum      | optional| Type of value. Used to determine the editor to use for the value. One of: bool, enum, float, int, string. Default is ‘string’ |
 | default  | string    | optional| Default value for this configuration in string format |
 | description| string  | optional | Description of the configuration for human use |
-| enum     | \[strings] | optional* | List of valid enum values as strings. Required when datatype is enum |
+| enum     | \[strings] | optional* | List of valid enum values as strings. Required when dataType is enum |
 | max      | float     | optional | Optional maximum value for numeric data |
 | min      | float     | optional | Optional minimum value for numeric data | 
 | secret   | bool      | optional | Optional flag that the configuration value is secret and its value will not be included in publications. 
@@ -381,15 +380,14 @@ local/openzwave/5/\$node:
   "attr": {
     "make": "AeoTec",
     "type": "multisensor",
-    "name": ""
+    "alias": ""
   },
   "config": {
     "alias": {
-      "alias": "deck",
-      "datatype": "string",
-      "description": "Friendly name",
+      "dataType": "string",
+      "description": "Node alias for use instead of node ID in publications",
     }, 
-  },
+  ],
   "timestamp": "2020-01-20T23:33:44.999PST",
 }
 ~~~
@@ -428,9 +426,9 @@ The message structure:
 | address     | string    | **required** | Address of the publication |
 | attr        | map       | optional     | attributes describing the output |
 | config      | List of **Configuration Records**|optional|List of Configuration Records of attributes that can be configured. Only available when an input or output has defined their own configuration |
-| datatype    | string    | optional     | Value datatype. See appending for datatypes, default is string
+| dataType    | string    | optional     | Value data type. See appending for dataTypes, default is string
 | description | string    | optional     | Description of the in/output for humans |
-| enumValues  | list      | optional*    | List of possible values. Required when datatype is enum |
+| enumValues  | list      | optional*    | List of possible values. Required when dataType is enum |
 | instance    | string    | **required** | Output instance for for multi-I/O nodes |
 | max         | number    | optional     | Maximum possible in/output value |
 | min         | number    | optional     | Minimum possible in/output value |
@@ -445,7 +443,7 @@ Example payload for output discovery:
 local/openzwave/5/\$output/temperature/0:
 {
   "address": "local/openzwave/5/temperature/0/$output",
-  "datatype": "float",
+  "dataType": "float",
   "instance": "0",
   "timestamp": "2020-01-20T23:33:44.999PST",
   "outputType": "temperature",
@@ -683,12 +681,12 @@ The message structure:
 | sender       | string    | **required** | Address of the publisher of the message (domain/publisherId) |
 | timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | nodeID       | string    | **required** | ID of the node to create. Must be unique within the publisher. For example the camera name |
 
-For Example, To create a new camera node with the ipcam publisher:
+For example, to create a new camera node with the ipcam publisher:
 
 ~~~json
 local/ipcam/Bennet-Bridge/\$create:
 {
-  "address" : "local/ipcam/Bennet-Bridge/\$create",
+  "address" : "local/ipcam/Bennet-Bridge/$create",
   "configure" : { 
     "url":"https://images.drivebc.ca/bchighwaycam/pub/cameras/149.jpg",
     "name": "Kelowna Bennett bridge",
@@ -763,13 +761,13 @@ local/openzwave/5/\$configure:
 }
 ~~~
 
-In this example, the publisher mrbob must first have published its node discovery containing the identity attribute signed by the ZCAS before the message is accepted.
+In this example, the publisher mrbob must first have published its node discovery containing the identity attribute signed by the DSS before the message is accepted.
 
 # Message Signing
 
-By default all messages are signed using JWS and compact serialization, except for local and test domains where plaintext JSON can be sent. In normal operations, unsigned messages MUST be discarded. In secured domains, the publisher identity itself must be signed by the DSS. 
+By default all messages MUST be signed using JWS with compact serialization, except for local and test domains where plaintext JSON is allowed. Outside the local and test domains, unsigned messages MUST be discarded. In secured domains, the publisher identity itself must be signed by the DSS using ECDSA. 
 
-## Plain text JSON - unsigned messages
+## Plaintext JSON - unsigned messages
 
 In local and test domains messages can be published in JSON serialized UTF-8 plain text, except for the $raw publication whose content is not JSON serialized.
 
@@ -794,46 +792,29 @@ For Example:
 
 The signature is generated using [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet). Its keys are shorter than RSA, it has not (yet - May 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
 
-The signature is created by creating the SHA256 hash of \<header>.\<payload>, then encrypting the hash using ECDSA using the publisher's private key, and last to base64url encode the result.
-
-or better, use a JWS library to generate the signature.
-
-See the example code:
-* golang: https://github.com/hspaay/iotc.standard/tree/master/examples/edcsa_text.go
+See the example code for generating and verifying signatures:
+* golang: https://github.com/hspaay/iotc.standard/tree/master/examples/edcsa_text.go. See also the go-jose library.
 * python: https://github.com/hspaay/iotc.standard/tree/master/examples/example.py
 * javascript: https://github.com/hspaay/iotc.standard/tree/master/examples/example.js
 
 
+## Updating The Publisher Identity
 
-The signature is verified in reverse order by:
-1. Base64url decode the protected header, payload and the signature
-2. Determine the public signing key of the publisher from its discovery information.
-3. Generate the hash of the encoded header and payload concatenated with a dot, just as done in signing.
-4. ECDSA verify the signature using the hash and public key
-
-See the examples for more detail.
-
-If the verification fails, the message content is discarded.
-
-When a publisher publishes its own public identity, the verification process must use the signature contained in the identity, as it could have been renewed. 
-
-To close the gaping security hole this creates, the identity MUST be correctly signed by the DSS in secured domains. In non-secured domains the message bus must be configured with ACL to only allow the publisher to publish on its identity address.
+When a publisher re-publishes its own public identity, the signature verification must use the public key contained in the identity to verify the signature. To close the gaping security hole this opens, the identity MUST be correctly signed by the DSS in secured domains. In non-secured domains the message bus must be configured with ACL to only allow the publisher to publish on its identity address.
 
 
 # Encrypted Messaging - JWE
 
-In secured zones, messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted. The sender signs the message with its private key and then encrypt it with the recipient's public key.
+In secured domains, messages with potentially sensitive content, eg input commands and configuration updates, must be sent encrypted. The sender signs the message with its private key and then encrypt it with the recipient's public key.
 
 To this end the JSON Web Encryption is used. JWE encapsulates the JWS signed message: JWE( JWS(payload, privateKey), publicKey ) and uses compact serialization before publishing. 
 
 
-
 # Secured IoT Domains
-
 
 ## Introduction
 
-In a secured domain publications are made by publishers whose identity can be verified. Protection of secured domains consists of rings. Each ring is an independent layer of security. The implementation of one ring MUST NOT assume the implementation of another ring.
+In a secured domain, publications are made by publishers whose identity can be verified. Protection of secured domains consists of rings. Each ring is an independent layer of security. The implementation of one ring MUST NOT assume the implementation of another ring.
 
 Ring 5 is the environment outside the message bus, eg the internet. This must be treated as hostile. Think of the badlands with predetors roaming freely. Connections to the message bus through this environment MUST be made with TLS and certificate verification enabled to protect against DNS spoofing and man in the middle attacks.
 
@@ -1084,9 +1065,9 @@ Message structure:
 | timestamp   | string   | **required** | Time the record is created |
 
 
-# Appendix A: Value Datatypes
+# Appendix A: Value DataTypes
 
-The datatype attribute in input and output discovery messages describe what value is expected in publications. The possbible values are:
+The dataType attribute in input and output discovery messages describe what value is expected in publications. The possbible values are:
 
 | Datatype         | Description |
 |:-------------    |:------------      |
@@ -1102,9 +1083,9 @@ The datatype attribute in input and output discovery messages describe what valu
 
 **Lists** Lists are supported by starting and ending the value with '[' and ']' and separating each value with a comma.
 
-For datatype int, when the value starts with '\[' it should be considered a list of integers instead of a single integer.  If an application expects a non-list value and receives a list, the first item in the list should be used. If an application expects a list and receives a non-list value it should be treated as a list of 1 item.
+For dataType int, when the value starts with '\[' it should be considered a list of integers instead of a single integer.  If an application expects a non-list value and receives a list, the first item in the list should be used. If an application expects a list and receives a non-list value it should be treated as a list of 1 item.
 
-**json values** Values with the json datatype are a catch-all for storing multiple fields as json payload. It should be avoided when possible as discovery provides no description of the structure. If possible rather use the $event publication that publishes all output values in a single event.
+**json values** Values with the json dataType are a catch-all for storing multiple fields as json payload. It should be avoided when possible as discovery provides no description of the structure. If possible rather use the $event publication that publishes all output values in a single event.
 
 # Appendix B: Node Types
 
