@@ -1069,7 +1069,7 @@ Message structure:
 
 The dataType attribute in input and output discovery messages describe what value is expected in publications. The possbible values are:
 
-| Datatype         | Description |
+| DataType         | Description |
 |:-------------    |:------------      |
 | bool             | value is boolean converted to text: "true", "false" (case insensitive)  |
 | json             | value is a json type with multiple fields, converted to JSON (*)|
@@ -1166,7 +1166,7 @@ Node status attributes. These convey the current state of the node and are read-
 | health        | health status of the device 0-100% |
 | lastError     | most recent error message |
 | lastSeen      | ISO time the device was last seen |
-| latencyMSec   | duration connect to sensor in milliseconds |
+| latencymsec   | duration connect to sensor in milliseconds |
 | neighborCount | mesh network nr of neighbors |
 | neighborIDs   | mesh network device neighbors ID list [id,id,...] |
 | rxCount       | Nr of messages received from device |
@@ -1203,7 +1203,7 @@ Standard configuration attribute names
 When available, units used in publication follow the SI standard 
 The value content is converted to text before publication.
 
-| input/output type| Units  | Value Datatype   | description |
+| input/output type| Units  | Value DataType   | description |
 |:--------------  |:--------|:-----------------|:------------|
 | acceleration    | m/s2    | List of floats   | coordinates: x,y,z
 | airquality      |         | integer   | Number representing the air quality
