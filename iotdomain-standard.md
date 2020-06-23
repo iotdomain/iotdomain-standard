@@ -1,7 +1,7 @@
-The IotConnect Standard
+The IoTDomain Standard
 =======================
 
-The IotConnect standard defines a simple and easy to use information exchange method between IoT publishers and consumers.
+The IoTDomain standard defines a simple and easy to use information exchange method between IoT publishers and consumers.
 
 
 [[TOC]]
@@ -793,9 +793,9 @@ For Example:
 The signature is generated using [ECDSA Elliptic Curve Cryptography](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet). Its keys are shorter than RSA, it has not (yet - May 2020) been broken and it is claimed to be [more secure than RSA](https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/).
 
 See the example code for generating and verifying signatures:
-* golang: https://github.com/hspaay/iotc.standard/tree/master/examples/edcsa_text.go. See also the go-jose library.
-* python: https://github.com/hspaay/iotc.standard/tree/master/examples/example.py
-* javascript: https://github.com/hspaay/iotc.standard/tree/master/examples/example.js
+* golang: https://github.com/iotdomain/iotd.standard/tree/master/examples/edcsa_text.go. See also the go-jose library.
+* python: https://github.com/iotdomain/iotd.standard/tree/master/examples/example.py
+* javascript: https://github.com/iotdomain/iotd.standard/tree/master/examples/example.js
 
 
 ## Updating The Publisher Identity
@@ -942,7 +942,7 @@ Just like publishers, the DSS has an identity with a signature. There are two me
 
 1. Message bus permissions. Only the DSS has the credentials to publish on the dss publisher address. This is the default in local domains. Restricting access to the DSS publisher address using message bus ACLs is highly recommended.
 
-2. Global Certificate. The DSS is published with a certificate signed by a global CA like Lets Encrypt. Subscribers can verify this certificate with the global CA before trusting the DSS. To facilitate the use of global domains, the domain '\{name}.iotc.zone' is available, where \{name} is a globally unique domain.
+2. Global Certificate. The DSS is published with a certificate signed by a global CA like Lets Encrypt. Subscribers can verify this certificate with the global CA before trusting the DSS. To facilitate the use of global domains, the domain '\{name}.iotd.zone' is available, where \{name} is a globally unique domain.
 
 The domain 'local' is reserved for local-only domains. In this case message bus permissions must secure the DSS publications and no certificate is used. 
 
@@ -1140,7 +1140,7 @@ attributes are configurable they are included in the Node Config section.
 | filename         | filename to write images or other values |
 | gatewayAddress   | the node gateway address |
 | hostname         | network device hostname |
-| iotcVersion      | Publishers include the version of the IotConnect standard. Eg v1.0 |
+| iotcVersion      | Publishers include the version of the IoTDomain standard. Eg v1.0 |
 | localIP          | IP address of the node, for nodes that are publishers themselves |
 | latlon           | String with "{latitude}, {longitude}" of device location  |
 | locationName     | Name of a location |

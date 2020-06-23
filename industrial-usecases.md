@@ -1,3 +1,3 @@
-# IoTConnect Industrial Automation Use-Cases
+# Industrial IoT Use-Cases
 
 work in progress...
