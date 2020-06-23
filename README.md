@@ -1,6 +1,6 @@
-<i src="iotconnect.png"></i>
+<i src="iotdomain.png"></i>
 
-# The IoTConnect Standard
+# The IoTDomain Standard
 
 [[TOC]]
 
@@ -18,7 +18,7 @@ This standard is aimed at software developers and system implementors with a bas
 
 ## Description
 
-IotConnect is a simple standard for M2M (machine to machine) discovery and exchange of information from IoT devices and related services. The goal is to provide interoperability between a wide range of IoT devices and their consumers. Benefits of following this standard are:
+IoTDomain is a simple standard for M2M (machine to machine) discovery and exchange of information from IoT devices and related services. The goal is to provide interoperability between a wide range of IoT devices and their consumers. Benefits of following this standard are:
 
 1. Consumers only have to implement support for this standard, instead of a wide variety of other device specific protocols, like for example zwave, zigbee, 1-wire, [and many more....](https://www.ubuntupit.com/top-15-standard-iot-protocols-that-you-must-know-about/)
 2. Developers of IoT devices that implement this standard don't have to invent their own protocol. The devices can directly be used which greatly enlarges their market.
