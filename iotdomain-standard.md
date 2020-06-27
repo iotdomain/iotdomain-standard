@@ -189,17 +189,19 @@ These tasks are discussed in more detail in following sections.
 
 Information is published using an address on the message bus. This address consists of the node address to whom the information relates \{domain}/\{publisherID}/\{nodeID}, an input or output type and instance, and a message type. The input/output type and instance are used to publish input and output information.
 
-Addresses can only contain of alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. All addresses end with a message type indicating the content of the message.
+Addresses can only contain of lower case alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. All addresses end with a message type indicating the content of the message.
+All addresses MUST use lower case to avoid problems with mixed case addresses not being recognized due to a difference in case.
+
 
 > Address format:
->  **\{domain} / \{publisherId} / \[ \{nodeId} \[ / \{ioType} / \{instance} \] \] / \{messagetype\}**
+>  **\{domain} / \{publisherid} / \[ \{nodeid} \[ / \{ioType} / \{instance} \] \] / \{messagetype\}**
 
 Where:
 * \{domain} is the domain in which the node information is published. This can be "local" or an internet domain.
-* \{publisherId} is the ID of the service that publishes the node, input and output information
-* \{nodeId} is the ID of the node that is being published
+* \{publisherid} is the ID of the service that publishes the node, input and output information
+* \{nodeid} is the ID of the node that is being published
 * \{ioType} and \{instance} refers to a particular input or output of the node. 
-* \{messageType} indicates the content of the message, be it publishing of discovery or values.
+* \{messagetype} indicates the content of the message, be it publishing of discovery or values.
 For message bus systems that do not support the '/' character as address separator, the separator character of the message bus implementation can be used. However, the message itself must contain the original address using the '/' character as the separator to allow for interoperability between different message bus implementations.
 
 **Reserved message types:**
@@ -208,8 +210,8 @@ The standard predefines the following message types.
 
 | Publisher message type | Purpose |
 |:--------     |:--------|
-| \$identity   | Publication of a publisher's identity (domain/publisherId/\$identity)
-| \$set        | Renew a publisher's identity by the DSS (domain/publisherId/\$set)
+| \$identity   | Publication of a publisher's identity (domain/publisherid/\$identity)
+| \$set        | Renew a publisher's identity by the DSS (domain/publisherid/\$set)
 
 
 | Node message type | Purpose |
@@ -292,7 +294,7 @@ Publisher discovery messages contain the publisher's public identity. The identi
 
 Publisher discovery:
 
-  >  **\{domain}/\{publisher}/\$identity**
+  >  **\{domain}/\{publisherid}/\$identity**
 
 Message structure
 
@@ -319,7 +321,7 @@ This message only applies when using a message bus that supports LWT (last will 
 
 The LWT option lets the message bus publish a message when the publisher connection is lost unexpectedly. A message with status "connected" and "disconnected" is sent by the publisher when connecting or gracefully disconnecting. The status "lost" is set through last will & testament feature and send by the message bus if the publisher unexpectedly disconnects. 
 
-Address:  **\{domain}/\{publisherId}/\$lwt**
+Address:  **\{domain}/\{publisherid}/\$lwt**
 
 Message structure:
 The message structure:
@@ -336,12 +338,12 @@ Node discovery messages contain a detailed description of the node. It does not 
 
 Node discovery address:
 
-  >  **\{domain}/\{publisherId}/\{nodeId}/\$node**
+  >  **\{domain}/\{publisherid}/\{nodeid}/\$node**
 
 Where:
 * {domain} is the IoT domain in which the node lives
-* {publisherId} is the ID of the publisher of the information. The publisher Id is unique within its domain
-* {nodeId} is the ID of the node that is discovered. This is a device or a service identifier and unique within a publisher. 
+* {publisherid} is the ID of the publisher of the information. The publisher Id is unique within its domain
+* {nodeid} is the ID of the node that is discovered. This is a device or a service identifier and unique within a publisher. 
 * $node message type for node discovery
 
 Node discovery message structure:
@@ -352,9 +354,10 @@ Node discovery message structure:
 | attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
 | config       | map of **Configuration Records** | optional | Map of attribute configuration by attribute name. Each record describes the configuration constraints. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
 | nodeId       | string    | **required** | Immutable ID of this node
+| nodeType     | string    | **required** | Description of the type of node, see Appendix B for predefined types
 | publisherId  | string    | **required** | Publisher managing this node
 | status       | map       | optional     | key-value pairs describing node performance status
-| timestamp    | string    | **required** | Time the record is created |
+| timestamp    | string    | **required** | Time the record is last updated |
 
 **Configuration Record**
 
@@ -373,7 +376,6 @@ The attribute configuration record describes the configuration constraints of th
 Example payload for node discovery
 
 ~~~json
-local/openzwave/5/\$node:
 {
   "address": "local/openzwave/5/$node",
   
@@ -392,55 +394,47 @@ local/openzwave/5/\$node:
 }
 ~~~
 
-## Discover Inputs and Outputs
+## Discover Outputs
 
-Inputs and outputs discovery are published separately from the node. The discovery of each output and each input is published separately. This facilitates control over which inputs and outputs are shared with other domains. 
-
-Address of input discovery:
-
-> **\{domain}/\{publisherId}/\{nodeId|alias}/\{inputType}/\{instance}/\$input/**
+Discovered outputs are published separately from the node. This facilitates control over which outputs are shared with other domains. 
 
 Address of output discovery:
 
-> **\{domain}/\{publisherId}/\{nodeId|alias}/\{outputType}/\{instance}/\$output**
+> **\{domain}/\{publisherid}/\{nodeid|alias}/\{outputtype}/\{instance}/\$output**
 
 | Address segment | Description |
 | :-------------- | :---------- |
 | {domain}        | The IoT domain in which the node lives, or "local" for local domains |
-| {publisherId}   | The service that is publishing the information |
-| {nodeId|alias}  | ID or alias of the node that owns the input or output |
-| {inputType}     | Type identifier of the input. For a list of predefined types see Appendix D |
-| {outputType}    | Type identifier of the output. For a list of predefined types see Appendix D |
+| {publisherid}   | The service that is publishing the information |
+| {nodeid|alias}  | ID or alias of the node that owns the input or output |
+| {outputtype}    | Type identifier of the output. For a list of predefined types see Appendix D |
 | {instance}      | The instance of the input or output on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning|
-| \$input         | Message type for input discovery, or |
 | \$output        | Message type for output discovery |
 
 For example, the discovery of a temperature sensor on node '5', published by a service named 'openzwave', is published on address:
 
   > **local/openzwave/5/temperature/0/\$output**
 
-The message structure:
+The output message structure:
 
 | Field       | Data Type | Required     | Description |
 |:----------- |:--------- |:---------    |:----------- |
 | address     | string    | **required** | Address of the publication |
-| attr        | map       | optional     | attributes describing the output |
+| attr        | map       | **required** | attributes describing the output |
 | config      | List of **Configuration Records**|optional|List of Configuration Records of attributes that can be configured. Only available when an input or output has defined their own configuration |
 | dataType    | string    | optional     | Value data type. See appending for dataTypes, default is string
-| description | string    | optional     | Description of the in/output for humans |
 | enumValues  | list      | optional*    | List of possible values. Required when dataType is enum |
 | instance    | string    | **required** | Output instance for for multi-I/O nodes |
 | max         | number    | optional     | Maximum possible in/output value |
 | min         | number    | optional     | Minimum possible in/output value |
-| timestamp   | string    | **required** | Time the record is created |
 | outputType  | string    | **required** | Type of output. See the output type list for standardized type names |
-| unit        | string    | optional     | The unit of the data type |
+| timestamp   | string    | **required** | Time the record is last updated |
+| unit        | string    | optional     | The unit of the output value |
 
 
 Example payload for output discovery:
 
 ~~~json
-local/openzwave/5/\$output/temperature/0:
 {
   "address": "local/openzwave/5/temperature/0/$output",
   "dataType": "float",
@@ -451,18 +445,68 @@ local/openzwave/5/\$output/temperature/0:
 }
 ~~~   
 
+## Discover Inputs 
+
+Discovered inputs are published separately from the node and outputs. This facilitates control over which inputs and outputs are shared with other domains. If an alias is set then input discovery is published on the alias address.
+
+Address of input discovery:
+
+> **\{domain}/\{publisherid}/\{nodeid|alias}/\{inputtype}/\{instance}/\$input/**
+
+| Address segment | Description |
+| :-------------- | :---------- |
+| {domain}        | The IoT domain in which the node lives, or "local" for local domains |
+| {publisherid}   | The service that is publishing the information |
+| {nodeid|alias}  | ID or alias of the node that owns the input |
+| {inputtype}     | Type identifier of the input. For a list of predefined types see Appendix D |
+| {instance}      | The instance of the input on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning|
+| \$input         | Message type for input discovery |
+
+For example, the discovery of a switch on node '5', published by a service named 'openzwave', is published on address:
+
+  > **local/openzwave/5/switch/0/\$input**
+
+The input message structure:
+
+| Field       | Data Type | Required     | Description |
+|:----------- |:--------- |:---------    |:----------- |
+| address     | string    | **required** | Input discovery address |
+| attr        | map       | **required** | Attributes describing the input |
+| config      | List of **Configuration Records**|optional|List of Configuration Records of attributes that can be configured. Only available when an input or output has defined their own configuration |
+| dataType    | string    | optional     | Value data type. See appending for dataTypes, default is string
+| enumValues  | list      | optional*    | List of possible values. Required when dataType is enum |
+| inputType   | string    | **required** | Type of input. See the input type list for standardized type names |
+| instance    | string    | **required** | Input instance for for multi-I/O nodes |
+| max         | number    | optional     | Maximum possible in value |
+| min         | number    | optional     | Minimum possible in value |
+| timestamp   | string    | **required** | Time the record is last updated |
+| unit        | string    | optional     | The unit of the input value |
+
+Example payload for input discovery:
+
+~~~json
+{
+  "address": "local/openzwave/5/switch/0/$input",
+  "dataType": "bool",
+  "instance": "0",
+  "timestamp": "2020-01-20T23:33:44.999PST",
+  "inputType": "switch",
+}
+~~~   
+
+
 # Publishing Output Values
 
 Publishers monitor the outputs of their nodes and publish updates to node output values when there is a change. Output values are published using various commands depending on the content, as described in the following paragraphs.
 
 >The general output value address is:
->  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\{$messageType}**
+>  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\{$messageType}**
 
 | Address segment | Description|
 |:--------------- |:-----------|
 | {domain}        | The global IoT domain in which publishing takes place, or "local" |
-| {publisherId}   | ID of the publisher of the information |
-| {nodeId|alias}  | ID or alias of the node that owns the input or output |
+| {publisherid}   | ID of the publisher of the information |
+| {nodeid|alias}  | ID or alias of the node that owns the input or output |
 | {type}          | The type of output, for example "temperature". This standard includes a list of output types |
 | {instance}      | The instance of the type on the node |
 | {$messageType}  | Type of output value publication as described in the following paragraphs: $raw, $latest, ...|
@@ -476,7 +520,7 @@ The payload used with the '\$raw' message type is the pure information as text, 
 
 The \$raw publication is the fallback that every publisher *MUST* publish. It is intended for interoperability with highly constrained devices or 3rd party software that do not support JSON parsing. The payload is therefore the straight value.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$raw**
+Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$raw**
 
 Payload: Output value, converted to string. There is no message JSON and no signature.
 
@@ -491,7 +535,7 @@ The \$latest publication contains the latest known value of the output including
 
 This is the recommended publication publishing updates to single value sensors. See also the \$event publication for multiple values that are related. 
 
-Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$latest**
+Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$latest**
 
 The message structure is as follows:
 
@@ -502,7 +546,7 @@ The message structure is as follows:
 | unit         | string    | optional     | unit of value type, if applicable |
 | value        | string    | **required** | value in string format |
 
-Example of a publication on local/openzwave/6/\$latest/temperature/0:
+Example of a publication:
 
 ~~~json
 {
@@ -517,7 +561,7 @@ Example of a publication on local/openzwave/6/\$latest/temperature/0:
 
 The payload for the '\$forecast' command contains an ordered list of the projected future values along with address information and signature. The forecast is published each time a value changes. 
 
-Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$forecast**
+Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$forecast**
 
 The message structure:
 
@@ -534,7 +578,6 @@ The message structure:
 For example:
 
 ~~~json
-local/openzwave/6/$forecast/temperature/0:
 {
   "address" : "local/openzwave/6/temperature/0/$forecast",
   "duration": "86400",
@@ -552,7 +595,7 @@ local/openzwave/6/$forecast/temperature/0:
 
 The payload for the '\$history' command contains an ordered list of the recent values. The history is published each time a value changes. The history publication is optional and intended for users that like to view a 24 hour trend. It can also be used to check for missing values in case transport reliability is untrusted. The content is not required to persist between publisher restarts.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\{type}/\{instance}/\$history**
+Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$history**
 
 The message structure:
 
@@ -569,7 +612,6 @@ The message structure:
 For example:
 
 ~~~json
-local/openzwave/6/temperature/0/$history:
 {
   "address" : "local/openzwave/6/temperature/0/$history",
   "duration": "86400",
@@ -588,7 +630,7 @@ The optional \$event publication indicates the publisher provides multiple outpu
 
 The event value can include one, multiple or all node outputs. 
 
-Address:  **\{domain}/\{publisherId}/\{nodeId|alias}/\$event**
+Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\$event**
 
 The message structure:
 
@@ -601,9 +643,8 @@ The message structure:
 For Example:
 
 ~~~json
-local/vehicle-1/\{nodeId}/\$event:
 {
-  "address" : "local/vehicle-1/\{nodeId}/$event",
+  "address" : "local/vehicle-1/\{nodeid}/$event",
   "event" : [
     {"speed/0": "30.2" },
     {"heading/0": "165" },
@@ -619,7 +660,7 @@ local/vehicle-1/\{nodeId}/\$event:
 
 The optional \$batch publication indicates the publisher provides multiple events. This is intended to reduce bandwidth in case for high frequency sampling of multiple values. Consumers must process the events in the provided order, as if they were sent one at a time.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId}/\$batch**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\$batch**
 
 The message structure:
 
@@ -657,7 +698,6 @@ The message structure:
 For Example:
 
 ~~~json
-local/openzwave/6/switch/0/\$set:
 {
   "address" : "local/openzwave/6/switch/0/\$set",
   "sender": "local/mrbob",
@@ -670,7 +710,7 @@ local/openzwave/6/switch/0/\$set:
 
 Publishers where users can create and delete nodes subscribe to this message type. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera where nodeId is the new camera ID.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId}/\$create**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\$create**
 
 The message structure:
 
@@ -684,9 +724,8 @@ The message structure:
 For example, to create a new camera node with the ipcam publisher:
 
 ~~~json
-local/ipcam/Bennet-Bridge/\$create:
 {
-  "address" : "local/ipcam/Bennet-Bridge/$create",
+  "address" : "local/ipcam/kelowna-bennet/$create",
   "configure" : { 
     "url":"https://images.drivebc.ca/bchighwaycam/pub/cameras/149.jpg",
     "name": "Kelowna Bennett bridge",
@@ -701,7 +740,7 @@ local/ipcam/Bennet-Bridge/\$create:
 
 Publishers that support creation and deletion of nodes, subscribe to this message type. For example to delete an ip camera, the ip camera publisher can be told to delete the camera node.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId}/\$delete**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\$delete**
 
 The message structure:
 
@@ -714,9 +753,8 @@ The message structure:
 For Example, To delete a previously created camera node:
 
 ~~~json
-local/ipcam/Kelowna-Bennet/$delete:
 {
-  "address" : "local/ipcam/Kelowna-Bennet/$delete",
+  "address" : "local/ipcam/kelowna-bennet/$delete",
   "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
 }
@@ -735,7 +773,7 @@ Additional restrictions can apply to only allow certain senders to update node c
 
 If one of the above verification steps fail then the message is discarded and the request is logged.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId}/\$configure**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\$configure**
 
 Configuration Message structure:
 
@@ -750,7 +788,6 @@ Configuration Message structure:
 Example payload for node configuration:
 
 ~~~json
-local/openzwave/5/\$configure:
 {
   "address": "local/openzwave/5/$configure",
   "attr": {
@@ -840,7 +877,7 @@ The process of joining a secured domain:
 2. The publisher publishes its publisher identity message with the temporary public keys
 3. The DSS receives the identity message, adds it to the list of unverified publishers and notifies the administrator
 4. The administator verifies and optionally updates the publisher identity information and marks the publisher as trusted
-5. The DSS publishes the new signed identity information to the publisher along with signing keys to be used in further messaging. This message is encrypted with the publisher's temporary encryption key using JWE. The address is \{domain}/\{publisherId}/\$set
+5. The DSS publishes the new signed identity information to the publisher along with signing keys to be used in further messaging. This message is encrypted with the publisher's temporary encryption key using JWE. The address is \{domain}/\{publisherid}/\$set
 6. The publisher receives the update to its identity and keys, verifies that they came from the DSS, and persists the information securely
 7. The publisher publishes its updated identity for consumers using the new signing keys
 8. The DSS periodically re-issues new identity and signing keys before they expire
