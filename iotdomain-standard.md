@@ -189,8 +189,7 @@ These tasks are discussed in more detail in following sections.
 
 Information is published using an address on the message bus. This address consists of the node address to whom the information relates \{domain}/\{publisherID}/\{nodeID}, an input or output type and instance, and a message type. The input/output type and instance are used to publish input and output information.
 
-Addresses can only contain of lower case alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. All addresses end with a message type indicating the content of the message.
-All addresses MUST use lower case to avoid problems with mixed case addresses not being recognized due to a difference in case.
+Addresses can only contain alphanumeric, hyphen (-), and underscore (\_) characters. Reserved words start with a dollar ($) character. The separator is the '/' character. All addresses end with a message type indicating the content of the message.
 
 
 > Address format:
@@ -216,10 +215,11 @@ The standard predefines the following message types.
 
 | Node message type | Purpose |
 |:--------     |:--------|
+| \$alias      | Command to set the node alias |
 | \$batch      | Publication of a batch of events |
-| \$configure  | Message to update the node configuration |
-| \$create     | Message to create a node. Only usable with publishers that can create/delete nodes |
-| \$delete     | Message to delete a node. Only usable with publishers that can create/delete nodes |
+| \$configure  | Command to update the node configuration |
+| \$create     | Command to create a node. Only usable with publishers that can create/delete nodes |
+| \$delete     | Command to delete a node. Only usable with publishers that can create/delete nodes |
 | \$event      | Publication of all output values at once using a single event message |
 | \$node       | Publication of a node discovery |
 | \$lwt        | Publisher last will and testament if supported |
@@ -251,11 +251,11 @@ See the security section for more details.
 
 ### Node Aliases
 
-Node Aliases are intended to support replacing devices while retaining the input and output addresses. When devices are replaced, the node identifier of the replacement can differ from the original. ZWave for example generates a new node ID each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID, which can take quite a bit of effort. 
+Node Aliases are intended to support replacing devices while retaining node, input and output addresses. When devices are replaced, the hardware address or ID of the replacement can differ from the original. ZWave for example generates a new internal node address each time a node is added to the network. This leads to the problem that when replacing a node, all consumers must be updated to use the replacement node ID, which can take quite a bit of effort. 
 
-To address this problem, nodes can be configured with an 'alias' ID. When a node alias is set, all input and output publications use the alias instead of the node ID.
+To address this problem, a nodeID can be replaced with an 'alias'. When a node alias is set it replaces the nodeID and all publications of the node, its inputs and outputs use the alias  as the node ID.
 
-The node alias can be set through the node $configure command. Support for node aliases is optional and implemented in the publisher. If the node configuration does not have an 'alias' configuration option then it is not supported.
+The node alias can be set through the node $alias command and viewed in the node discovery message.
 
 ## Subscribers
 
@@ -298,22 +298,19 @@ Publisher discovery:
 
 Message structure
 
-| Field           | type | Description |
+| Field           | type     | Description |
 |:--------------- |:-------  | ------ |
 | address         | string   | **required** | The address of the publication
-| public          | Identity | Public identity record
-| | certificate     | Optional x509 certificate, base64 encoded. Included with the DSS identity to be able to verify it with a 3rd party. |
-| | domain          | IoT domain name as used in the address. "local" or "test" for local domains |
-| | issuerName      | Name of issuer, usually this is "DSS" or the CA name. |
-| | location        | Optional location of the publisher, city, province/state, country |
-| | organization    | Organization the publisher belongs to |
-| | publicKey       | PEM encoded public key for verifying publisher signatures and encrypting messages to this publisher |
-| | publisherId     | ID of this publisher
-| | timestamp       | Time the identity was signed |
-| | validUntil      | ISO8601 Date this identity is valid until |
-| signature        | string | base64 encoded signature of the public identity record
-| signer           | string | Address or name of the signer, eg 'domain.dss' or a CA such as Lets Encrypt
-| timestamp        | Time this message was created |
+| certificate     | string   | optional | Optional x509 certificate, base64 encoded. Included with the DSS identity to be able to verify it with a 3rd party. |
+| domain          | string   | **required** | IoT domain this publisher belongs to. "local" or "test" for local domains |
+| issuerName      | string   | **required** | Name of identity issuer, usually this is "domain/dss" or the CA name. |
+| location        | string   | optional | Optional location of the publisher, city, province/state, country |
+| organization    | string   | optional | Organization the publisher belongs to |
+| publicKey       | string   | **required** | PEM encoded public key for verifying publisher signatures and encrypting messages to this publisher |
+| publisherId     | string   | **required** | ID of this publisher 
+| signature       | string   | **required** | base64 encoded signature from issuer of this identity record with the signature field blank
+| timestamp       | string   | **required** | Time the identity was signed |
+| validUntil      | string   | **required** | ISO8601 Date this identity is valid until |
 
 ## \$lwt: Publisher Last Will & Testament (MQTT)
 
@@ -326,10 +323,10 @@ Address:  **\{domain}/\{publisherid}/\$lwt**
 Message structure:
 The message structure:
 
-| Field        | Data Type | Required     | Description |
-|:----------   |:--------  |:-----------  |:------------ |
-| address      | string    | **required** | Address of the publication |
-| status       | string    | **required** | LWT status: "connected", "disconnected", "lost"
+| Field      | Data Type | Required     | Description  |
+|:---------- |:--------  |:-----------  |:------------ |
+| address    | string    | **required** | Address of the publication |
+| status     | string    | **required** | LWT status: "connected", "disconnected", "lost" |
 
 
 ## Discover Nodes
@@ -343,25 +340,25 @@ Node discovery address:
 Where:
 * {domain} is the IoT domain in which the node lives
 * {publisherid} is the ID of the publisher of the information. The publisher Id is unique within its domain
-* {nodeid} is the ID of the node that is discovered. This is a device or a service identifier and unique within a publisher. 
+* {nodeid} is the ID of the node. This is a device or a service identifier and unique within a publisher. 
 * $node message type for node discovery
 
 Node discovery message structure:
 
 | Field        | Data Type | Required     | Description
 |:-----------  |:--------- |:----------   |:------------
-| address      | string    | **required** | The address of the publication
-| attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. |
+| address      | string    | **required** | The address of the publication|
+| attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. | 
 | config       | map of **Configuration Records** | optional | Map of attribute configuration by attribute name. Each record describes the configuration constraints. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
-| nodeId       | string    | **required** | Immutable ID of this node
-| nodeType     | string    | **required** | Description of the type of node, see Appendix B for predefined types
-| publisherId  | string    | **required** | Publisher managing this node
-| status       | map       | optional     | key-value pairs describing node performance status
+| deviceID     | string    | **required** | The node device ID used as nodeID if no alias is set|
+| nodeID       | string    | **required** | The node ID as generated by the device|
+| nodeType     | string    | **required** | Description of the type of node, see Appendix B for predefined types|
+| status       | map       | optional     | key-value pairs describing node performance status|
 | timestamp    | string    | **required** | Time the record is last updated |
 
 **Configuration Record**
 
-The attribute configuration record describes the configuration constraints of the attribute. It includes dataType, and various constraints of the configuration:
+The configuration record describes the constraints of the configuration. :
 
 | Field    | Data Type | Required  | Description |
 |:-------- |:--------- |:--------- |:----------- |
@@ -373,21 +370,40 @@ The attribute configuration record describes the configuration constraints of th
 | min      | float     | optional | Optional minimum value for numeric data | 
 | secret   | bool      | optional | Optional flag that the configuration value is secret and its value will not be included in publications. 
 
+**Node Configuration**
+some node configuration attributes are standardized. The following attributes are optional:
+
+| Config         | Data Type | Default      | Description |
+|:-------------  |:--------- |:----------   |:----------- |
+| name           | string    | ""           | Node friendly name|
+| publishBatch   | int       | 0            | publish $batch messages containing N events. 0 to ignore|
+| publishEvent   | bool      | false        | publish $event messages containing event output values. Only outputs that have their event configuration enabled are included.|
+| publishHistory | bool      | true | enable publishing the history of outputs if also enabled in the output itself. Set to false to disable for all outputs.|
+| publishLatest  | bool      | true | enable publishing the latest value of outputs if also enabled in the output itself, Set to false to disable for all outputs. |
+| publishRaw     | bool      | true | enable publishing the raw value of outputs if also enabled in the output itself, Set to false to disable for all outputs. |
+
+
 Example payload for node discovery
 
 ~~~json
 {
   "address": "local/openzwave/5/$node",
+  "nodeID": "5",
   
   "attr": {
     "make": "AeoTec",
+    "name": "Garage Sensor",
     "type": "multisensor",
-    "alias": ""
+    "publishHistory": "false",
   },
   "config": {
-    "alias": {
+    "name": {
       "dataType": "string",
-      "description": "Node alias for use instead of node ID in publications",
+      "description": "Friendly name of the device or service",
+    }, 
+    "publishHistory": {
+      "dataType": "bool",
+      "description": "Enable publishing of the output history when also enabled in the output.",
     }, 
   ],
   "timestamp": "2020-01-20T23:33:44.999PST",
@@ -400,13 +416,13 @@ Discovered outputs are published separately from the node. This facilitates cont
 
 Address of output discovery:
 
-> **\{domain}/\{publisherid}/\{nodeid|alias}/\{outputtype}/\{instance}/\$output**
+> **\{domain}/\{publisherid}/\{nodeid}/\{outputtype}/\{instance}/\$output**
 
 | Address segment | Description |
 | :-------------- | :---------- |
 | {domain}        | The IoT domain in which the node lives, or "local" for local domains |
 | {publisherid}   | The service that is publishing the information |
-| {nodeid|alias}  | ID or alias of the node that owns the input or output |
+| {nodeid}  | ID of the node that owns the input or output |
 | {outputtype}    | Type identifier of the output. For a list of predefined types see Appendix D |
 | {instance}      | The instance of the input or output on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning|
 | \$output        | Message type for output discovery |
@@ -420,44 +436,56 @@ The output message structure:
 | Field       | Data Type | Required     | Description |
 |:----------- |:--------- |:---------    |:----------- |
 | address     | string    | **required** | Address of the publication |
-| attr        | map       | **required** | attributes describing the output |
-| config      | List of **Configuration Records**|optional|List of Configuration Records of attributes that can be configured. Only available when an input or output has defined their own configuration |
+| attr        | map       | optional     | Attributes describing the output, including config values |
+| config      | List of **Configuration Records**|optional| See node configuration for details |
 | dataType    | string    | optional     | Value data type. See appending for dataTypes, default is string
 | enumValues  | list      | optional*    | List of possible values. Required when dataType is enum |
-| instance    | string    | **required** | Output instance for for multi-I/O nodes |
 | max         | number    | optional     | Maximum possible in/output value |
 | min         | number    | optional     | Minimum possible in/output value |
-| outputType  | string    | **required** | Type of output. See the output type list for standardized type names |
 | timestamp   | string    | **required** | Time the record is last updated |
 | unit        | string    | optional     | The unit of the output value |
 
 
-Example payload for output discovery:
+**Output Destination Configuration**
+Where supported, outputs can be configured with methods of publishing their output value to a specific destination. These attributes with their configuration are optional. Standard configuration settings for configuring destinations are:
+
+| Config         | Data Type | Default   | Description |
+|:-------------- |:--------- |:--------  |:----------- |
+| publishEvent   | bool      | false     | include output in the $event publication (when enabled)
+| publishFile    | string    | ""        | save output value to a local file, ignored if filename is ""
+| publishHistory | bool      | false     | publish on the output $history address
+| publishLatest  | bool      | true      | publish on the output $latest address
+| publishRaw     | bool      | true      | publish on the output $raw address
+
+Example payload for output discovery. In this case the published output methods are not configurable:
 
 ~~~json
 {
   "address": "local/openzwave/5/temperature/0/$output",
+  "attr": {
+    "publishHistory": "true",
+    "publishLatest": "true", 
+    "publishRaw": "true",
+  },
   "dataType": "float",
-  "instance": "0",
   "timestamp": "2020-01-20T23:33:44.999PST",
-  "outputType": "temperature",
-  "unit": "C",
+  "unit": "C"
 }
 ~~~   
 
 ## Discover Inputs 
 
-Discovered inputs are published separately from the node and outputs. This facilitates control over which inputs and outputs are shared with other domains. If an alias is set then input discovery is published on the alias address.
+Discovered inputs are published and configured separately from the node and outputs. This facilitates control over which inputs and outputs are enabled and which are shared with other domains.
 
 Address of input discovery:
 
-> **\{domain}/\{publisherid}/\{nodeid|alias}/\{inputtype}/\{instance}/\$input/**
+> **\{domain}/\{publisherid}/\{nodeid}/\{inputtype}/\{instance}/\$input/**
 
 | Address segment | Description |
 | :-------------- | :---------- |
 | {domain}        | The IoT domain in which the node lives, or "local" for local domains |
 | {publisherid}   | The service that is publishing the information |
-| {nodeid|alias}  | ID or alias of the node that owns the input |
+| {nodeid}        | ID of the node that owns the input |
 | {inputtype}     | Type identifier of the input. For a list of predefined types see Appendix D |
 | {instance}      | The instance of the input on the node. If only a single instance exists the standard is to use 0 unless a name is used to provide more meaning|
 | \$input         | Message type for input discovery |
@@ -466,31 +494,43 @@ For example, the discovery of a switch on node '5', published by a service named
 
   > **local/openzwave/5/switch/0/\$input**
 
-The input message structure:
+The input discovery message structure:
 
 | Field       | Data Type | Required     | Description |
 |:----------- |:--------- |:---------    |:----------- |
 | address     | string    | **required** | Input discovery address |
-| attr        | map       | **required** | Attributes describing the input |
-| config      | List of **Configuration Records**|optional|List of Configuration Records of attributes that can be configured. Only available when an input or output has defined their own configuration |
+| attr        | map       | optional     | Attributes describing the input, including config values |
+| config      | List of **Configuration Records**|optional| See node configuration for details |
 | dataType    | string    | optional     | Value data type. See appending for dataTypes, default is string
 | enumValues  | list      | optional*    | List of possible values. Required when dataType is enum |
-| inputType   | string    | **required** | Type of input. See the input type list for standardized type names |
-| instance    | string    | **required** | Input instance for for multi-I/O nodes |
 | max         | number    | optional     | Maximum possible in value |
 | min         | number    | optional     | Minimum possible in value |
 | timestamp   | string    | **required** | Time the record is last updated |
 | unit        | string    | optional     | The unit of the input value |
 
-Example payload for input discovery:
+**Input Configuration**
+Where supported, inputs can be configured with methods of receiving their input value from a specific source. These attributes with their configuration are optional. 
+
+Standardized configuration settings for configuring input sources are:
+
+| Attr/Config   | Data Type | Default | Description |
+|:------------- |:--------- |:--------|:----------- |
+| pollInterval  | int       | 0       | interval in seconds to poll source (only for rest endpoints). 0 is disabled |
+| login         | string    | ""      | Basic Auth login from rest endpoints, use secret=true |
+| password      | string    | ""      | Basic Auth login from rest endpoints, use secret=true |
+| setEnabled    | bool      | true    | When enabled, the input can be set with a $set command |
+| source        | string    | ""      | Source to read input from, subscription, file://filename or http://host|
+
+Example payload for input discovery. The input set command is enabled:
 
 ~~~json
 {
   "address": "local/openzwave/5/switch/0/$input",
+  "attr": {
+    "setEnabled": "true",
+  },
   "dataType": "bool",
-  "instance": "0",
   "timestamp": "2020-01-20T23:33:44.999PST",
-  "inputType": "switch",
 }
 ~~~   
 
@@ -500,13 +540,13 @@ Example payload for input discovery:
 Publishers monitor the outputs of their nodes and publish updates to node output values when there is a change. Output values are published using various commands depending on the content, as described in the following paragraphs.
 
 >The general output value address is:
->  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\{$messageType}**
+>  **\{domain}/\{publisherid}/\{nodeid}/\{type}/\{instance}/\{$messageType}**
 
 | Address segment | Description|
 |:--------------- |:-----------|
 | {domain}        | The global IoT domain in which publishing takes place, or "local" |
 | {publisherid}   | ID of the publisher of the information |
-| {nodeid|alias}  | ID or alias of the node that owns the input or output |
+| {nodeid}        | ID of the node that manages the output |
 | {type}          | The type of output, for example "temperature". This standard includes a list of output types |
 | {instance}      | The instance of the type on the node |
 | {$messageType}  | Type of output value publication as described in the following paragraphs: $raw, $latest, ...|
@@ -518,9 +558,9 @@ With exception of the \$raw command, all publications contain a payload consisti
 
 The payload used with the '\$raw' message type is the pure information as text, without any signature or other metadata. It is the only message without the json message and signature as described above.
 
-The \$raw publication is the fallback that every publisher *MUST* publish. It is intended for interoperability with highly constrained devices or 3rd party software that do not support JSON parsing. The payload is therefore the straight value.
+The \$raw publication is the fallback that is enabled by default. It can be disabled in the node or output 'publishRaw' configuration. It is intended for interoperability with highly constrained devices or 3rd party software that do not support JSON parsing. The payload is therefore the straight value. 
 
-Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$raw**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\{type}/\{instance}/\$raw**
 
 Payload: Output value, converted to string. There is no message JSON and no signature.
 
@@ -531,11 +571,11 @@ local/openzwave/6/temperature/0/\$raw: "20.6"
 
 ## \$latest: Publish Latest Output With Metadata
 
-The \$latest publication contains the latest known value of the output including metadata such as the unit and timestamp. The value is represented as a string. Binary data is converted to base64. 
+The \$latest publication contains the latest known value of the output including metadata such as the unit and timestamp. The value is represented as a string. Binary data is converted to base64. It is enabled by default and can be disabled with the node or output 'publishLatest' configuration.
 
 This is the recommended publication publishing updates to single value sensors. See also the \$event publication for multiple values that are related. 
 
-Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$latest**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\{type}/\{instance}/\$latest**
 
 The message structure is as follows:
 
@@ -561,7 +601,7 @@ Example of a publication:
 
 The payload for the '\$forecast' command contains an ordered list of the projected future values along with address information and signature. The forecast is published each time a value changes. 
 
-Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$forecast**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\{type}/\{instance}/\$forecast**
 
 The message structure:
 
@@ -593,9 +633,13 @@ For example:
 
 ## \$history: Publish History of Recent Output Values
 
-The payload for the '\$history' command contains an ordered list of the recent values. The history is published each time a value changes. The history publication is optional and intended for users that like to view a 24 hour trend. It can also be used to check for missing values in case transport reliability is untrusted. The content is not required to persist between publisher restarts.
+The payload for the '\$history' command contains an ordered list of the recent values. The history is 
+published each time a value changes. The history publication is optional and can be enabled with the 
+node or output 'publishHistory' configuration. It is intended for users that like to view a 24 hour trend.
+It can also be used to check for missing values in case transport reliability is untrusted. The content 
+is not required to persist between publisher restarts.
 
-Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\{type}/\{instance}/\$history**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\{type}/\{instance}/\$history**
 
 The message structure:
 
@@ -626,11 +670,17 @@ For example:
 
 ## \$event: Publish Event With Multiple Output Values
 
-The optional \$event publication indicates the publisher provides multiple output values with the same timestamp as a single event. This can be used in lieu of publishing output values separately and thus reduce bandwidth. It can also be useful to publish multiple values that are highly correlated. 
+The optional \$event publication indicates the publisher provides multiple output values with the same
+timestamp as a single event. This can be used in lieu of publishing output values separately and thus 
+reduce bandwidth. It can also be useful to publish multiple values that are highly correlated. 
+
+This is disabled by default but can be enabled with the node and output 'publishEvent' configuration.
+The node configuration enables/disables the publication while the output configuration determines if 
+the output value is included in the event publication.
 
 The event value can include one, multiple or all node outputs. 
 
-Address:  **\{domain}/\{publisherid}/\{nodeid|alias}/\$event**
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\$event**
 
 The message structure:
 
@@ -644,7 +694,7 @@ For Example:
 
 ~~~json
 {
-  "address" : "local/vehicle-1/\{nodeid}/$event",
+  "address" : "local/vehicle-1/{nodeid}/$event",
   "event" : [
     {"speed/0": "30.2" },
     {"heading/0": "165" },
@@ -658,7 +708,9 @@ For Example:
 
 ## \$batch: Publish Batch With Multiple Events
 
-The optional \$batch publication indicates the publisher provides multiple events. This is intended to reduce bandwidth in case for high frequency sampling of multiple values. Consumers must process the events in the provided order, as if they were sent one at a time.
+The optional \$batch publication indicates the publisher provides multiple events. This is intended to 
+reduce bandwidth in case for high frequency sampling of multiple values. Consumers must process the events
+in the provided order, as if they were sent one at a time.
 
 Address:  **\{domain}/\{publisherid}/\{nodeid}/\$batch**
 
@@ -673,53 +725,55 @@ The message structure:
 | timestamp    | string    | **required** | ISO8601 timestamp this message was created |
 
 
-# Input Commands
+# Node Commands
 
-Input commands are send by other publishers to control inputs of a node. The messages of all input commands contain the address of the sender to be able to verify the signature.
+Node commands are send by other publishers to control a node or set one of its inputs. The messages of all commands contain the address of the sender to be able to verify the signature. 
 
-In secured domains, input commands are only accepted if the message is encrypted, properly signed, and is sent by publishers whose identity is signed by the DSS.
+In secured domains, commands are only accepted if the message is encrypted, properly signed, and is sent by publishers whose identity is signed by the DSS.
 
 Additional restrictions can be imposed by limiting updates to specific publishers.
 
-## \$set: Set Input Value
-Publishers subscribe to receive commands to update the inputs of the node they manage.
+## \$alias: Set Node Alias
 
-Address:  **\{domain}/\{publisher}/\{node}/\{type}/\{instance}/\$set**
+A node alias replaces the nodeID in publications of the node, its inputs and outputs. The purpose is to be able to replace a node without requiring changing all its consumers. Once an alias is set, all node publications and commands use the alias as the node ID in their publications. To clear a node alias set an empty alias.
+
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\$alias**
 
 The message structure:
 
-| Field        | Data Type | Required      | Description
-|:------------ |:--------- |:----------    |:-----------
+| Field        | Data Type | Required     | Description
+|:------------ |:--------- |:----------   |:-----------
 | address      | string    | **required** | Address of the publication |
-| timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
-| sender       | string    | **required** | Address of the publisher of the message (domain/publisherId) |
-| value        | string    | **required** | The control input value to set |
+| alias        | string    | **required** | The new node ID|
+| sender       | string    | **required** | domain/publisherId of the message |
+| timestamp    | string    | **required** | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
 
-For Example:
+For example, to change openzwave node 5 to use 'deck':
 
 ~~~json
 {
-  "address" : "local/openzwave/6/switch/0/\$set",
+  "address" : "local/openzwave/5/$alias",
+  "alias": "deck",
   "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
-  "value": "true",
 }
 ~~~
 
+
 ## \$create: Create Node
 
-Publishers where users can create and delete nodes subscribe to this message type. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera where nodeId is the new camera ID.
+Some publishers lets users create and delete nodes. For example to add a new ip camera, the ip camera publisher can be told to create a new node for a new camera where nodeId is the new camera ID.
 
 Address:  **\{domain}/\{publisherid}/\{nodeid}/\$create**
 
 The message structure:
 
-| Field        | Data Type | Required      | Description
-|:------------ |:--------- |:----------    |:-----------
-| address      | string    | **required**  | Address of the publication |
-| configure    | map       | **required**  | key-value pairs for configuration of the node. This is the same content as the config field in the $configure command
-| sender       | string    | **required** | Address of the publisher of the message (domain/publisherId) |
-| timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | nodeID       | string    | **required** | ID of the node to create. Must be unique within the publisher. For example the camera name |
+| Field        | Data Type | Required     | Description
+|:------------ |:--------- |:----------   |:-----------
+| address      | string    | **required** | Address of the publication |
+| configure    | map       | **required** | key-value pairs for configuration of the node. This is the same content as the config field in the $configure command
+| sender       | string    | **required** | domain/publisherId of the message |
+| timestamp    | string    | **required** | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
 
 For example, to create a new camera node with the ipcam publisher:
 
@@ -738,17 +792,17 @@ For example, to create a new camera node with the ipcam publisher:
 
 ## \$delete: Delete Node
 
-Publishers that support creation and deletion of nodes, subscribe to this message type. For example to delete an ip camera, the ip camera publisher can be told to delete the camera node.
+Publishers that support creation of nodes, also support deleting these nodes. For example to delete an ip camera, the ip camera publisher can be told to delete the camera node.
 
 Address:  **\{domain}/\{publisherid}/\{nodeid}/\$delete**
 
 The message structure:
 
-| Field        | Data Type | Required      | Description
-|:------------ |:--------- |:----------    |:-----------
-| address      | string    | **required**  | Address of the publication |
-| sender       | string    | **required**  | Address of the publisher |
-| timestamp    | string    | **required**  | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | 
+| Field        | Data Type | Required     | Description
+|:------------ |:--------- |:----------   |:-----------
+| address      | string    | **required** | Address of the publication |
+| sender       | string    | **required** | Address of the publisher |
+| timestamp    | string    | **required** | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. | 
 
 For Example, To delete a previously created camera node:
 
@@ -757,6 +811,31 @@ For Example, To delete a previously created camera node:
   "address" : "local/ipcam/kelowna-bennet/$delete",
   "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
+}
+~~~
+
+## \$set: Set Input Value
+Publishers subscribe to receive commands to update the inputs of the node they manage.
+
+Address:  **\{domain}/\{publisherid}/\{nodeid}/\{type}/\{instance}/\$set**
+
+The message structure:
+
+| Field        | Data Type | Required     | Description
+|:------------ |:--------- |:----------   |:-----------
+| address      | string    | **required** | Address of the publication |
+| sender       | string    | **required** | domain/publisherId the sender of this message |
+| timestamp    | string    | **required** | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
+| value        | string    | **required** | The control input value to set |
+
+For Example:
+
+~~~json
+{
+  "address" : "local/openzwave/6/switch/0/\$set",
+  "sender": "local/mrbob",
+  "timestamp": "2020-01-02T22:03:03.000PST",
+  "value": "true",
 }
 ~~~
 
@@ -777,19 +856,19 @@ Address:  **\{domain}/\{publisherid}/\{nodeid}/\$configure**
 
 Configuration Message structure:
 
-| Field        | type     | required     | Description
-|:------------ |:-------- |:------------ |:-----------
-| address      | string   | **required** | Address of the publication |
-| attr         | map      | **required** | key-value pairs for attributes to configure { key: value, …}. **Only fields that require change should be included**. Existing fields remain unchanged.
-| sender       | string   | **required** | Address of the sender node of the message |
-| timestamp    | string   | **required** | Time this request was created, in ISO8601 format
+| Field       | type     | required     | Description
+|:----------- |:-------- |:------------ |:-----------
+| address     | string   | **required** | Address of the publication |
+| attr        | map      | **required** | key-value pairs for attributes to configure { key: value, …}. **Only fields that require change should be included**. Existing fields remain unchanged.
+| sender      | string   | **required** | Address of the sender node of the message |
+| timestamp   | string   | **required** | Time this request was created, in ISO8601 format
 
 
 Example payload for node configuration:
 
 ~~~json
 {
-  "address": "local/openzwave/5/$configure",
+  "address" : "local/openzwave/5/$configure",
   "attr": {
     "name": "My new name"
   },
@@ -798,25 +877,30 @@ Example payload for node configuration:
 }
 ~~~
 
-In this example, the publisher mrbob must first have published its node discovery containing the identity attribute signed by the DSS before the message is accepted.
+In this example, the publisher mrbob must first have published its node discovery containing the identity 
+attribute signed by the DSS before the message is accepted.
 
 # Message Signing
 
-By default all messages MUST be signed using JWS with compact serialization, except for local and test domains where plaintext JSON is allowed. Outside the local and test domains, unsigned messages MUST be discarded. In secured domains, the publisher identity itself must be signed by the DSS using ECDSA. 
+By default all messages MUST be signed using JWS with compact serialization, except for local and test 
+domains where plaintext JSON is allowed. Outside the local and test domains, unsigned messages MUST be 
+discarded. In secured domains, the publisher identity itself must be signed by the DSS using ECDSA. 
 
 ## Plaintext JSON - unsigned messages
 
-In local and test domains messages can be published in JSON serialized UTF-8 plain text, except for the $raw publication whose content is not JSON serialized.
+In local and test domains messages can be published in JSON serialized UTF-8 plain text, except for the 
+$raw publication whose content is not JSON serialized.
 
-This mode allows inspection of the data directly on the message bus and is interoperable with consumers that understand JSON but don't support signatures. It should however only be used in trusted environments.
+This mode allows inspection of the data directly on the message bus and is interoperable with consumers 
+that understand JSON but don't support signatures. It should however only be used in trusted environments.
 
 ## Compact JWS JSON Serialization Signing
 
-Compact JWS JSON serialization, serializes a message consists of three parts concatenated and separated by a dot '.'. Eg:
-
-Part 1 consists of the base64url encoded protected header. This header contains the algorithm claim as described in JWS JSON header specification
-Part 2 consists of the base64url encoded payload. 
-Part 3 consists of the JWS signature, which is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
+Compact JWS JSON serialization, serializes a message consists of three parts concatenated and separated 
+by a dot '.'. Eg:
+ Part 1 consists of the base64url encoded protected header. This header contains the algorithm claim as described in JWS JSON header specification
+ Part 2 consists of the base64url encoded payload. 
+ Part 3 consists of the JWS signature, which is the base64url encoded encrypted hash of: \<base64url protected header> . \<base64url encoded payload>. 
 
 > Base64URL(UTF8(protected header)) . Base64URL(payload) . Base64URL(JWS Signature)
 
@@ -851,21 +935,42 @@ To this end the JSON Web Encryption is used. JWE encapsulates the JWS signed mes
 
 ## Introduction
 
-In a secured domain, publications are made by publishers whose identity can be verified. Protection of secured domains consists of rings. Each ring is an independent layer of security. The implementation of one ring MUST NOT assume the implementation of another ring.
+In a secured domain, publications are made by publishers whose identity can be verified. Protection of 
+secured domains consists of rings. Each ring is an independent layer of security. The implementation of
+one ring MUST NOT assume the implementation of another ring.
 
-Ring 5 is the environment outside the message bus, eg the internet. This must be treated as hostile. Think of the badlands with predetors roaming freely. Connections to the message bus through this environment MUST be made with TLS and certificate verification enabled to protect against DNS spoofing and man in the middle attacks.
+Ring 5 is the environment outside the message bus, eg the internet. This must be treated as hostile. 
+Think of the badlands with predetors roaming freely. Connections to the message bus through this environment
+MUST be made with TLS and certificate verification enabled to protect against DNS spoofing and man in 
+the middle attacks.
 
-Ring 4 is the LAN environment where the message bus resides. This should be considered just as hostile as the internet as any computer on the LAN that is compromised can mount an attack. A message bus that runs on a LAN and is accessible via the internet needs proper firewall configuration and should run in a DMZ separate from the rest of the LAN. If available it runs on its own VLAN to prevent unintended access to the rest of the LAN. 
+Ring 4 is the LAN environment where the message bus resides. This should be considered just as hostile
+as the internet as any computer on the LAN that is compromised can mount an attack. A message bus that
+runs on a LAN and is accessible via the internet needs proper firewall configuration and should run in
+a DMZ separate from the rest of the LAN. If available it runs on its own VLAN to prevent unintended access
+to the rest of the LAN. 
 
-Ring 3 protects the message bus server connection. The server must require TLS connections. Clients are required to have proper credentials. Security can be further increased with client side certificates, support for certificate revocation and frequent credential rotation. To detect suspicious connections, connections from clients are logged; Geolocation restrictions of IP addresses are applied; IP block lists are applied; Connection frequency restrictions are in place. Monitoring and alerting of suspicious connections are in place. Basically best practices for any server exposed to the internet.
+Ring 3 protects the message bus server connection. The server must require TLS connections. Clients are 
+required to have proper credentials. Security can be further increased with client side certificates, 
+support for certificate revocation and frequent credential rotation. To detect suspicious connections, 
+connections from clients are logged; Geolocation restrictions of IP addresses are applied; IP block lists 
+are applied; Connection frequency restrictions are in place. Monitoring and alerting of suspicious connections
+are in place. Basically best practices for any server exposed to the internet.
 
-Ring 2 protects the message bus publish and subscription environment. This ring protects against clients subscribing or publishing to topics they are not allowed to. The minimum requirement is to differentiate between clients that subscribe vs clients that can publish. These permissions are granted separately. The default approach used MUST be of deny access first and grant access as needed. 
+Ring 2 protects the message bus publish and subscription environment. This ring protects against clients
+subscribing or publishing to topics they are not allowed to. The minimum requirement is to differentiate
+between clients that subscribe vs clients that can publish. These permissions are granted separately. The
+default approach used MUST be of deny access first and grant access as needed. 
 
-Further enhancements are to control for each client which topics they are are allowed to publish to and subscribe to. For example, the DSS service is the only service allowed to publish on the  DSS address. Similarly, publishers should be the only clients allowed to publish discovery and outputs on their address. 
+Further enhancements are to control for each client which topics they are are allowed to publish to and
+subscribe to. For example, the DSS service is the only service allowed to publish on the  DSS address. 
+Similarly, publishers should be the only clients allowed to publish discovery and outputs on their address. 
 
-Ring 1 protects the message publications themselves. Each publication MUST be signed by its publisher and each publisher identity MUST be verified as signed by a trusted third party. 
+Ring 1 protects the message publications themselves. Each publication MUST be signed by its publisher 
+and each publisher identity MUST be verified as signed by a trusted third party. 
 
-This standard defines the 'DSS', domain security service, to act as a trusted party and control the message bus configuration. 
+This standard defines the 'DSS', domain security service, to act as a trusted party and control the 
+message bus configuration. 
 
 
 ## Joining A Secured IoT Domain - DSS
@@ -925,22 +1030,16 @@ The update message of a full identity record consists of the publisher identity 
 
 
 ~~~json
-my.domain.org/openzwave/\$set:
 {
-  "address": "my.domain.org/openzwave/\$set",
-  "public" : {
-    "domain": "my.domain.org",
-    "expires":  "2020-01-22T2:33:44.000PST",
-    "issuerName": "DSS",
-    "location":   "my location in BC, Canada",
-    "organization": "my organization",
-    "publicKey": "PEM encoded public key for signature verification and encryption",
-    "publisherId": "openzwave",
-    "timestamp": "2020-01-20T23:33:44.999PST",
-  },
+  "address": "my.domain.org/openzwave/$set",
+  "expires":  "2020-01-22T2:33:44.000PST",
+  "issuerName": "DSS",
+  "location":   "my location in BC, Canada",
+  "organization": "my organization",
+  "publicKey": "PEM encoded public key for signature verification and encryption",
+  "timestamp": "2020-01-20T23:33:44.999PST",
   "sender": "mydomain.org/dss",
-  "signature":  "base64encoded ECDSA signature of the sender",
-  "timestamp": "2020-01-20T23:34:00.000PST",
+  "signature":  "base64encoded ECDSA signature of the sender with signature field blank",
   "privateKey": "PEM encoded private key",
   }
 
@@ -1012,14 +1111,13 @@ Message Content:
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
 | address     | string   | **required** | Address of the publication |
-| clientId    | string   | optional     | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
-| host        | string   | **required** | IP address or hostname of the remote bus
-| login       | string   | **required** | Login identifier obtained from the administrator
-| nodeId      | string   | **required** | NodeId of the bridge to create |
-| password    | string   | **required** | Password to connect with
-| port        | integer  | optional     | port to connect to. Default is determined by protocol
-| protocol    | enum     | optional     | Protocol to use: "MQTT" (default), "REST"
-| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
+| clientId    | string   | optional     | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID. |
+| host        | string   | **required** | IP address or hostname of the remote bus |
+| login       | string   | **required** | Login identifier obtained from the administrator |
+| password    | string   | **required** | Password to connect with |
+| port        | integer  | optional     | port to connect to. Default is determined by protocol |
+| protocol    | enum     | optional     | Protocol to use: "MQTT" (default), "REST" |
+| sender      | string   | **required** | domain/publisher of the user that configures the bridge. |
 | timestamp   | string   | **required** | Time the record is created |
 
 To delete a bridge:
@@ -1038,20 +1136,20 @@ A bridge can be deleted from the local or the remote domain.
 
 Using the standard node configuration mechanism, the bridge node is configured with the domain it is bridging to. 
 
-Bridge configuration can be set on address: {domain}/\$bridge/\{bridgeId}/\$configure:
+Bridge configuration can be set on address: {domain}/\$bridge/\{bridgeId}/\$configure following the same
+ approach as configuration of other nodes.
 
-Bridges support the following configuration settings:
 
-| Field        | value type   | value        | Description
+Bridges support the following configuration attributes:
+
+| Attribute    | value type   | value        | Description
 |:------------ |:---------    |:-----------  |:----------
-| clientId     | string       | optional | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
+| clientId     | string       | optional     | ID of the client to connect as. Must be unique on a message bus. Default is to generate a temporary ID.
 | host         | string       | **required** | IP address or hostname of the remote bus
 | login        | string       | **required** | Login identifier obtained from the administrator
 | password     | string       | **required** | Password to connect with
 | port         | integer      | optional     | port to connect to. Default is determined by protocol
 | protocol     | enum         | optional     | Protocol to use: "MQTT" (default), "REST"
-| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
-| timestamp   | string   | **required** | Time the record is created |
 
 ## Forward Nodes, Inputs or Outputs
 
@@ -1071,19 +1169,20 @@ Message structure:
 | Field       | type     | required     | Description |
 |:------------|:-------- |:------------ |:----------- |
 | address     | string   | **required** | Address of the publication |
-| forward     | string   | **required** | The node, input or output address to forward |
-| discovery   | boolean  | optional     | Forward the node/output discovery publications, default=true |
-| batch       | boolean  | optional     | Forward the output \$batch publication(s), default=true |
-| event       | boolean  | optional     | Forward the output \$event publication(s), default=true |
-| forecast    | boolean  | optional     | Forward the output \$forecast publication(s), default=true |
-| history     | boolean  | optional     | Forward the output \$history publication(s), default=true |
-| latest      | boolean  | optional     | Forward the output \$latest publication(s), default=true |
-| value       | boolean  | optional     | Forward the output \$raw publication(s), default=true |
-| sender      | string   | **required** | Address of the sender, eg: my.domain.org/mrbob of the user that configures the bridge. |
-| timestamp   | string    | **required** | Time the record is created |
+| forward     | string   | **required** | Address to forward, eg domain/publisherId/nodeId/$node, input or output
+| scope       | object   | **required** | The scope of the information to forward |
+| - discovery | boolean  | optional     | Forward node/in/output discovery publications, default=true |
+| - batch     | boolean  | optional     | Forward output \$batch publication(s), default=true |
+| - event     | boolean  | optional     | Forward output \$event publication(s), default=true |
+| - forecast  | boolean  | optional     | Forward output \$forecast publication(s), default=true |
+| - history   | boolean  | optional     | Forward output \$history publication(s), default=true |
+| - latest    | boolean  | optional     | Forward output \$latest publication(s), default=true |
+| - raw       | boolean  | optional     | Forward output \$raw publication(s), default=true |
+| sender      | string   | **required** | domain/publisher sending the request |
+| timestamp   | string   | **required** | Time the record is created |
 
 
-## Remove Bridged Nodes, Inputs or Outputs 
+## Remove Forwarded Nodes, Inputs or Outputs 
 
 To remove a forward, use the following command:
 
@@ -1097,8 +1196,8 @@ Message structure:
 | Field       | type     | required     | Description |
 |:----------- |:-------- |:-----------  |:----------- |
 | address     | string   | **required** | Address of the publication |
-| remove      | string   | **required** | The node, input or output address to remove. |
-| sender      | string   | **required** | Address of the publisher |
+| remove      | string   | **required** | The address to remove |
+| sender      | string   | **required** | domain/publisher sending the request |
 | timestamp   | string   | **required** | Time the record is created |
 
 
@@ -1170,7 +1269,6 @@ attributes are configurable they are included in the Node Config section.
 | Key              | Value Description |
 |:---------------  |:----------------- |
 | address          | Node internal address if applicable. Can be used as the node ID |
-| alias            | Configured node alias. Used as nodeID of all inputs and outputs |
 | color            | color in hex notation |
 | description      | device description |
 | disabled         | device or sensor is disabled |
