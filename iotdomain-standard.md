@@ -290,7 +290,7 @@ In all cases discovery messages are re-published periodically by the publisher t
 
 ## Publisher Discovery
 
-Publisher discovery messages contain the publisher's public identity. The identity includes the public key used to verify the signature of the messages published. The process of signing uses JWS as described in the security section. Messages that fail signature verification MUST be discarded. The public key is also used to encrypt input and configuration messages to this publisher. The process of encryption uses JWE as described in the security section.
+Publisher identity messages contain the publisher's public identity. The identity includes the public key used to verify the JWS signature of the messages published, and the issuer and signature of the identity: DSS, self signed or CA. Messages that fail signature verification MUST be discarded. The public key is also used to encrypt input and configuration messages to this publisher. The process of encryption uses JWE as described in the security section.
 
 Publisher discovery:
 
@@ -303,7 +303,7 @@ Message structure
 | address         | string   | **required** | The address of the publication
 | certificate     | string   | optional | Optional x509 certificate, base64 encoded. Included with the DSS identity to be able to verify it with a 3rd party. |
 | domain          | string   | **required** | IoT domain this publisher belongs to. "local" or "test" for local domains |
-| issuerName      | string   | **required** | Name of identity issuer, usually this is "domain/dss" or the CA name. |
+| issuerId        | string   | **required** | ID of issuer identity, like the DSS ($dss), self signed (publisherID) or the CA name. |
 | location        | string   | optional | Optional location of the publisher, city, province/state, country |
 | organization    | string   | optional | Organization the publisher belongs to |
 | publicKey       | string   | **required** | PEM encoded public key for verifying publisher signatures and encrypting messages to this publisher |
@@ -1031,15 +1031,16 @@ The update message of a full identity record consists of the publisher identity 
 
 ~~~json
 {
-  "address": "my.domain.org/openzwave/$set",
-  "expires":  "2020-01-22T2:33:44.000PST",
-  "issuerName": "DSS",
-  "location":   "my location in BC, Canada",
+  "address":   "my.domain.org/openzwave/$set",
+  "domain":    "my.domain.org",
+  "expires":   "2020-01-22T2:33:44.000PST",
+  "issuerId":    "$dss",
+  "location":  "my location in BC, Canada",
   "organization": "my organization",
   "publicKey": "PEM encoded public key for signature verification and encryption",
   "timestamp": "2020-01-20T23:33:44.999PST",
-  "sender": "mydomain.org/dss",
-  "signature":  "base64encoded ECDSA signature of the sender with signature field blank",
+  "sender":    "mydomain.org/$dss",
+  "signature": "base64encoded ECDSA signature of the sender with signature field blank",
   "privateKey": "PEM encoded private key",
   }
 
@@ -1051,7 +1052,7 @@ The update message of a full identity record consists of the publisher identity 
 The requirements for a publisher to allow its identity to be updated: 
 
 1. The message must be encrypted with JWE using the publisher's current public key (all configuration updates must be encrypted)
-2. The message must originate from the DSS publisher. Eg the sender address is \{domain\}/dss and the message must be signed by the DSS.
+2. The message must originate from the publisher's DSS. Eg the sender address is \{domain\}/$dss and the message must be signed by the DSS.
 3. The message must not be sent with the retained flag
 4. The identity must contain a correct domain and publisherId. (you cannot assign a publisher an identity of another publisher). 
 5. The identity timestamp must be newer than the current identity timestamp
