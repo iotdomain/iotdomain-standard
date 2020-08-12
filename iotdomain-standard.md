@@ -176,12 +176,13 @@ Nodes can also publish information according to this standard directly, in which
 Publishers:
 
 1. Publish their own verified identity
-2. Handle updates to their own security keys and certificates 
-3. Publish node discovery information
-4. Publish node input and output discovery information
-5. Publish node output values 
-6. Handling requests to update node inputs
-7. Handle updates to node configurations
+2. Publish their runtime status using LWT if available
+3. Handle updates to their own security keys and certificates 
+4. Publish node discovery information
+5. Publish node input and output discovery information
+6. Publish node output values 
+7. Handling requests to update node inputs
+8. Handle updates to node configurations
 
 These tasks are discussed in more detail in following sections.
 
@@ -211,6 +212,7 @@ The standard predefines the following message types.
 |:--------     |:--------|
 | \$identity   | Publication of a publisher's identity (domain/publisherid/\$identity)
 | \$set        | Renew a publisher's identity by the DSS (domain/publisherid/\$set)
+| \$status     | Publication of a publisher's runtime status
 
 
 | Node message type | Purpose |
@@ -222,7 +224,6 @@ The standard predefines the following message types.
 | \$delete     | Command to delete a node. Only usable with publishers that can create/delete nodes |
 | \$event      | Publication of all output values at once using a single event message |
 | \$node       | Publication of a node discovery |
-| \$lwt        | Publisher last will and testament if supported |
 
 | Output message type | Purpose |
 |:--------     |:--------|
@@ -312,21 +313,18 @@ Message structure
 | timestamp       | string   | **required** | Time the identity was signed |
 | validUntil      | string   | **required** | ISO8601 Date this identity is valid until |
 
-## \$lwt: Publisher Last Will & Testament (MQTT)
+## \$status: Publisher Runtime Status
 
-This message only applies when using a message bus that supports LWT (last will & testament) .
+The runtime status shows the current status of a publisher. Messages with status "initializing", "connected" and "disconnected" are sent by the publisher during its lifecycle. When startup fails for any reason the status 'failed' is sent. The status "lost" is set through last will & testament feature and send by the message bus if the publisher unexpectedly disconnects. 
 
-The LWT option lets the message bus publish a message when the publisher connection is lost unexpectedly. A message with status "connected" and "disconnected" is sent by the publisher when connecting or gracefully disconnecting. The status "lost" is set through last will & testament feature and send by the message bus if the publisher unexpectedly disconnects. 
-
-Address:  **\{domain}/\{publisherid}/\$lwt**
+Address:  **\{domain}/\{publisherid}/\$status**
 
 Message structure:
-The message structure:
 
 | Field      | Data Type | Required     | Description  |
 |:---------- |:--------  |:-----------  |:------------ |
 | address    | string    | **required** | Address of the publication |
-| status     | string    | **required** | LWT status: "connected", "disconnected", "lost" |
+| status     | string    | **required** | "initializing", "connected", "disconnected", "failed", "lost" |
 
 
 ## Discover Nodes
