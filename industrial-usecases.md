@@ -1,3 +1,0 @@
-# Industrial IoT Use-Cases
-
-work in progress...
