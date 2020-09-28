@@ -211,7 +211,7 @@ The standard predefines the following message types.
 | Publisher message type | Purpose |
 |:--------     |:--------|
 | \$identity   | Publication of a publisher's identity (domain/publisherId/\$identity)
-| \$set        | Renew a publisher's identity by the DSS (domain/publisherId/\$set)
+| \$setIdentity| Renew a publisher's identity by the DSS (domain/publisherId/\$setIdentity)
 | \$status     | Publication of a publisher's runtime status
 
 
@@ -223,6 +223,7 @@ The standard predefines the following message types.
 | \$delete     | Command to delete a node. Only usable with publishers that can create/delete nodes |
 | \$event      | Publication of all output values at once using a single event message |
 | \$node       | Publication of a node discovery |
+| \$setId      | Publication of a set node ID message |
 
 | Output message type | Purpose |
 |:--------     |:--------|
@@ -235,7 +236,7 @@ The standard predefines the following message types.
 | Input message type | Purpose |
 |:--------     |:--------|
 | \$input      | Publication of an input discovery |
-| \$set        | Set the input value |
+| \$setInput   | Set the input value |
 
 
 ### Message Publication
@@ -340,8 +341,8 @@ Node discovery message structure:
 | address      | string    | **required** | The address of the publication|
 | attr         | map       | **required** | Key value pairs describing the node. The list of predefined attribute keys are part of the standard. See appendix B: Predefined Node Attributes. | 
 | config       | map of **Configuration Records** | optional | Map of attribute configuration by attribute name. Each record describes the configuration constraints. The attribute value can be set with a ‘$configure’ message based on the configuration description.|
-| hwAddress    | string    | **required** | The device's or service immutable hardware address |
-| nodeId       | string    | **required** | The node ID used in the node address |
+| hwID         | string    | **required** | Immutable ID of the device or service, related to the hardware it operates on |
+| nodeId       | string    | **required** | The node ID used in addressing the node, by default this is the hwID. It can be modified to support node replacement. |
 | status       | map       | optional     | key-value pairs describing node performance status|
 | timestamp    | string    | **required** | Time the record is last updated |
 
@@ -365,7 +366,7 @@ some node configuration attributes are standardized. The following attributes ar
 | Config         | Data Type | Default      | Description |
 |:-------------  |:--------- |:----------   |:----------- |
 | name           | string    | ""           | Node friendly name|
-| nodeId         | string    | hwaddress    | Node's published ID. Setting this changes the node, inputs and outputs publication addresses |
+| nodeId         | string    | hwID         | Node's published ID. Setting this changes the node, inputs and outputs publication addresses |
 | publishBatch   | int       | 0            | publish $batch messages containing N events. 0 to ignore|
 | publishEvent   | bool      | false        | publish $event messages containing event output values. Only outputs that have their event configuration enabled are included.|
 | publishHistory | bool      | true | enable publishing the history of outputs if also enabled in the output itself. Set to false to disable for all outputs.|
@@ -379,7 +380,7 @@ Example payload for node discovery
 {
   "address": "local/openzwave/5/$node",
   "nodeId": "5",
-  "hwAddress": "5",
+  "hwID": "5",
   
   "attr": {
     "make": "AeoTec",
@@ -513,7 +514,7 @@ Standardized configuration settings for configuring input sources are:
 | pollInterval  | int       | 0       | interval in seconds to poll source (only for rest endpoints). 0 is disabled |
 | login         | string    | ""      | Basic Auth login from rest endpoints, use secret=true |
 | password      | string    | ""      | Basic Auth login from rest endpoints, use secret=true |
-| setEnabled    | bool      | true    | When enabled, the input can be set with a $set command |
+| setEnabled    | bool      | true    | When enabled, the input can be set with a $setInput command |
 | source        | string    | ""      | Source to read input from, subscription, file://filename or http://host|
 
 Example payload for input discovery. The input set command is enabled:
@@ -783,10 +784,38 @@ For Example, To delete a previously created camera node:
 }
 ~~~
 
-## \$set: Set Input Value
+## \$setNodeId: Set A New Node ID
+
+Change the nodeID used in publications of the node, its inputs and outputs. The purpose is to be able to replace a node without requiring changing all its consumers. Once a new ID is set, all node publications and commands use the new node ID in the publication address. To return a node ID to its default (its hwID), set an empty ID.
+
+Address:  **\{domain}/\{publisherId}/\{nodeId}/\$setNodeId**
+
+The message structure:
+
+| Field        | Data Type | Required     | Description
+|:------------ |:--------- |:----------   |:-----------
+| address      | string    | **required** | Address of the publication |
+| nodeId       | string    | **required** | The new node ID|
+| sender       | string    | **required** | domain/publisherId of the message |
+| timestamp    | string    | **required** | Time this request was created, in ISO8601 format, eg: YYYY-MM-DDTHH:MM:SS.sssTZ. The timezone is the local timezone where the value was published. If a request was received with a newer timestamp, up to the current time, then this request is ignored. |
+
+For example, to change openzwave node 5 to 'deck':
+
+~~~json
+{
+  "address" : "local/openzwave/5/$setNodeId",
+  "nodeId":   "deck",
+  "sender":   "local/mrbob",
+  "timestamp": "2020-01-02T22:03:03.000PST",
+}
+~~~
+
+After this the node can be address as "local/openzwave/deck/..."
+
+## \$setInput: Set Input Value
 Publishers subscribe to receive commands to update the inputs of the node they manage.
 
-Address:  **\{domain}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$set**
+Address:  **\{domain}/\{publisherId}/\{nodeId}/\{type}/\{instance}/\$setInput**
 
 The message structure:
 
@@ -801,7 +830,7 @@ For Example:
 
 ~~~json
 {
-  "address" : "local/openzwave/6/switch/0/\$set",
+  "address" : "local/openzwave/6/switch/0/\$setInput",
   "sender": "local/mrbob",
   "timestamp": "2020-01-02T22:03:03.000PST",
   "value": "true",
@@ -951,7 +980,7 @@ The process of joining a secured domain:
 2. The publisher publishes its publisher identity message with the temporary public keys
 3. The DSS receives the identity message, adds it to the list of unverified publishers and notifies the administrator
 4. The administator verifies and optionally updates the publisher identity information and marks the publisher as trusted
-5. The DSS publishes the new signed identity information to the publisher along with signing keys to be used in further messaging. This message is encrypted with the publisher's temporary encryption key using JWE. The address is \{domain}/\{publisherId}/\$set
+5. The DSS publishes the new signed identity information to the publisher along with signing keys to be used in further messaging. This message is encrypted with the publisher's temporary encryption key using JWE. The address is \{domain}/\{publisherId}/\$setIdentity
 6. The publisher receives the update to its identity and keys, verifies that they came from the DSS, and persists the information securely
 7. The publisher publishes its updated identity for consumers using the new signing keys
 8. The DSS periodically re-issues new identity and signing keys before they expire
@@ -1000,7 +1029,7 @@ The update message of a full identity record consists of the publisher identity 
 
 ~~~json
 {
-  "address":   "my.domain.org/openzwave/$set",
+  "address":   "my.domain.org/openzwave/$setIdentity",
   "domain":    "my.domain.org",
   "expires":   "2020-01-22T2:33:44.000PST",
   "issuerId":    "$dss",
@@ -1125,14 +1154,14 @@ Bridges support the following configuration attributes:
 
 A bridge node has inputs to manage it forwarding a node, specific input or specific output. 
 
-* To forward a node through the bridge, use the following input set command
-> **\{domain}/\$bridge/\{bridgeId}/forward/node/$set**
+* To forward a node through the bridge, use the following input commands to set a forward
+> **\{domain}/\$bridge/\{bridgeId}/forward/node/$setInput**
 
 * To forward an input:  
-> **\{domain}/\$bridge/\{bridgeId}/forward/input/$set**
+> **\{domain}/\$bridge/\{bridgeId}/forward/input/$setInput**
 
 * To forward an output:  
-> **\{domain}/\$bridge/\{bridgeId}/forward/output/$set**
+> **\{domain}/\$bridge/\{bridgeId}/forward/output/$setInput**
  
 Message structure:
 
@@ -1154,11 +1183,11 @@ Message structure:
 
 ## Remove Forwarded Nodes, Inputs or Outputs 
 
-To remove a forward, use the following command:
+To remove a forward, use the following input commands:
 
-* **\{domain}/\$bridge/\{bridgeId}/remove/node/\$set**
-* **\{domain}/\$bridge/\{bridgeId}/remove/input/\$set**
-* **\{domain}/\$bridge/\{bridgeId}/remove/output/\$set**
+* **\{domain}/\$bridge/\{bridgeId}/remove/node/\$setInput**
+* **\{domain}/\$bridge/\{bridgeId}/remove/input/\$setInput**
+* **\{domain}/\$bridge/\{bridgeId}/remove/output/\$setInput**
 
 
 Message structure:
@@ -1300,7 +1329,6 @@ Standard configuration attribute names
 | locationName  | Device location name |
 | loginName     | login name |
 | name          | Device friendly name |
-| nodeId        | Customize node ID different from hardware address, also useful when replacing devices with different hardware|
 | netmask       | Network netmask |
 
 
