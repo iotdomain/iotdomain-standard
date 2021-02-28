@@ -6,6 +6,9 @@
 
 ## Status
 
+*** Archived - 
+Note January 2021: Since starting this project a number of international IoT standard have reached or are about to reach maturity. This standard has been a great learning experience and the work will continue on the [WoST project](https://github.com/wostzone/) that aims to be WoT compliant (where possible) ***
+
 This standard is currently (June 2020) a draft version. The standard is currently being validated with use-cases and a reference implementation.
 
 The standard can be found here:  [IoTDomain Standard](./iotdomain-standard.md)
